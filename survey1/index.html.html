@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الرفع المساحي</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        html, body { height: 100%; overflow: hidden; }
+        body { background: #f0f4f8; padding: 12px; }
+        .container { max-width: 1600px; margin: 0 auto; height: calc(100vh - 24px); display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Header */
+        .header { background: linear-gradient(135deg, #1a3a5c, #2d6a9f); color: white; padding: 15px 20px; border-radius: 14px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 6px 20px rgba(26,58,92,0.22); }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; width: 100%; }
+        
+        /* Status Bar */
+        .status-bar { background: rgba(255,255,255,0.14); padding: 8px 12px; border-radius: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; backdrop-filter: blur(6px); }
+        .status-bar span { background: rgba(255,255,255,0.95); color: #17324d; padding: 4px 10px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .status-bar strong { color: #1a3a5c; }
+        
+        /* Grid */
+        .grid-2 { display: grid; grid-template-columns: minmax(330px, 0.82fr) minmax(500px, 1.18fr); gap: 16px; margin-bottom: 12px; flex: 1 1 auto; min-height: 0; }
+        .card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; flex-direction: column; min-height: 0; }
+        .card:last-of-type { flex: 1 1 auto; min-height: 0; }
+        .table-card { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        .card h3 { margin-bottom: 12px; color: #1a3a5c; border-bottom: 2px solid #e0e7ef; padding-bottom: 8px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        
+        /* Map */
+        #map { flex: 1 1 auto; min-height: 0; border-radius: 10px; background: #e8f0fe; border: 2px solid #d5e2f0; min-height: 400px; aspect-ratio: 1 / 1; }
+        #mapLoading { text-align: center; padding: 180px 20px; color: #666; font-size: 16px; }
+        
+        /* Upload Zone - مميز وملون */
+        .upload-zone { 
+            border: 3px dashed #4CAF50; 
+            background: linear-gradient(135deg, #f0faf0, #e8f5e9); 
+            padding: 25px 30px; 
+            text-align: center; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+        }
+        .upload-zone:hover { 
+            border-color: #2E7D32; 
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9); 
+            transform: scale(1.01);
+            box-shadow: 0 4px 16px rgba(76, 175, 80, 0.25);
+        }
+        .upload-zone p { font-size: 18px; font-weight: bold; color: #2E7D32; margin-bottom: 4px; }
+        .upload-zone p span { font-size: 28px; display: block; }
+        .upload-zone small { color: #555; font-size: 12px; }
+        #fileInput { display: none; }
+        
+        /* Buttons */
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 13px; }
+        .btn-primary { background: #4CAF50; color: white; }
+        .btn-primary:hover { background: #45a049; transform: scale(1.02); }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-danger:hover { background: #da190b; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #e68900; }
+        .btn-info { background: #2196F3; color: white; }
+        .btn-info:hover { background: #0b7dda; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-earth { background: #4285F4; color: white; }
+        .btn-earth:hover { background: #3367D6; }
+        .btn-satellite { background: #8e44ad; color: white; }
+        .btn-satellite:hover { background: #7d3c98; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-calculate { background: #fd7e14; color: white; }
+        .btn-calculate:hover { background: #e06b0a; }
+        .btn-stop { background: #dc3545; color: white; }
+        .btn-stop:hover { background: #c82333; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; }
+        
+        /* API Key Box - صغير فوق الخريطة */
+        .api-key-box { 
+            background: #fff8e1; 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            border-right: 4px solid #ff9800; 
+            display: flex; 
+            flex-wrap: wrap; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 13px;
+        }
+        .api-key-box label { font-weight: bold; color: #856404; }
+        .api-key-box input[type="file"] { display: none; }
+        .api-key-box .file-label { 
+            background: #4285F4; 
+            color: white; 
+            padding: 4px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            font-size: 12px;
+        }
+        .api-key-box .file-label:hover { background: #3367D6; }
+        .api-status { font-size: 12px; padding: 2px 10px; border-radius: 12px; }
+        .api-status.success { background: #d4edda; color: #155724; }
+        .api-status.error { background: #f8d7da; color: #721c24; }
+        .api-status.loading { background: #fff3cd; color: #856404; }
+        .file-name { font-size: 12px; color: #555; }
+        
+        /* Action Bar - الأزرار تحت الفلاتر */
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            padding: 8px 0;
+            border-top: 1px solid #e0e7ef;
+            margin-top: 8px;
+        }
+        .action-bar .btn { font-size: 12px; padding: 6px 14px; }
+        
+        /* Filters - صف أفقي واحد */
+        .filters-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 0 10px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e8eef5;
+            background: #fafcff;
+            border-radius: 8px;
+            padding-inline: 10px;
+        }
+        .filters-row select, .filters-row input {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            background: white;
+            min-width: 110px;
+        }
+        .filters-row .search-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .filters-row .search-group input { min-width: 130px; }
+        .filters-row .search-group .btn { padding: 5px 12px; font-size: 12px; }
+        
+        /* Table */
+        .table-wrap { overflow-x: auto; overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: 420px; height: min(420px, calc(100vh - 410px)); }
+        table { width: auto; min-width: 100%; border-collapse: collapse; font-size: 11px; table-layout: auto; }
+        th { background: #1a3a5c; color: white; padding: 6px 7px; position: sticky; top: 0; z-index: 10; white-space: nowrap; font-size: 10.5px; }
+        td { padding: 5px 6px; border-bottom: 1px solid #e0e7ef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+        tr:hover { background: #f8faff; }
+        
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        
+        .center-badge { background: #e3f2fd; padding: 2px 8px; border-radius: 12px; font-size: 10px; color: #1565C0; }
+        .type-badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; }
+        .type-badge.activity { background: #fce4ec; color: #c62828; }
+        .type-badge.location { background: #e8f5e9; color: #2e7d32; }
+        .clickable-id { cursor: pointer; color: #1a3a5c; font-weight: bold; }
+        .clickable-id:hover { text-decoration: underline; color: #2196F3; }
+        .diff-positive { color: #f44336; font-weight: bold; }
+        .btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
+        .row-diff-red td { background: #ffe5e5 !important; color: #b71c1c; }
+        .row-diff-red:hover td { background: #ffdada !important; }
+        .row-diff-yellow td { background: #fff8c4 !important; color: #8a6d00; }
+        .row-diff-yellow:hover td { background: #fff3a3 !important; }
+        .row-tier-change td { background: #e8f0fe !important; color: #0d47a1; }
+        .row-tier-change:hover td { background: #dbeafe !important; }
+        .selection-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+        .selection-toolbar label { font-size: 13px; color: #1a3a5c; display: flex; align-items: center; gap: 6px; }
+        .selection-toolbar select { padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .checkbox-cell { width: 40px; text-align: center; }
+        .highlight-badge { display: inline-block; margin-right: 6px; padding: 2px 6px; border-radius: 10px; font-size: 10px; background: #f5f5f5; color: #555; }
+        
+        /* Tabs */
+        .tab-buttons { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tab-btn { padding: 6px 14px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .tab-btn.active { background: #1a3a5c; color: white; border-color: #1a3a5c; }
+        .tab-content { display: none; }
+        .tab-content.active { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        
+        /* Modals */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2147483647; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; max-width: 750px; width: 95%; max-height: 85vh; overflow-y: auto; }
+        .modal-close { float: left; cursor: pointer; font-size: 22px; color: #999; }
+        .modal-close:hover { color: #333; }
+        
+        .progress-bar { width: 100%; height: 18px; background: #ddd; border-radius: 10px; overflow: hidden; margin: 8px 0; }
+        .progress-fill { height: 100%; background: #4CAF50; transition: width 0.5s; width: 0%; }
+        .cancel-btn-container { text-align: center; margin-top: 12px; }
+        
+        .config-section { margin-bottom: 15px; border: 1px solid #e0e7ef; border-radius: 8px; padding: 12px; }
+        .config-section h4 { color: #1a3a5c; margin-bottom: 8px; font-size: 14px; }
+        .config-table { width: 100%; border-collapse: collapse; }
+        .config-table th { background: #e8f0fe; color: #1a3a5c; padding: 6px; font-size: 12px; }
+        .config-table td { padding: 4px; border: 1px solid #e0e7ef; }
+        .config-table input { width: 70px; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        
+        .save-option { background: #e8f0fe; padding: 8px 12px; border-radius: 8px; margin: 8px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .save-option label { font-weight: bold; color: #1a3a5c; font-size: 13px; }
+        .save-option input { flex: 1; min-width: 150px; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1>🗺️ نظام إدارة الرفع المساحي</h1>
+            <div class="status-bar" id="statusBar">
+                <span>📋 عدد الطلبات: <strong id="totalOrders">0</strong></span>
+                <span>💰 إجمالي الفروق: <strong id="totalDiff">0</strong> ج.م</span>
+                <span>📐 إجمالي المساحة: <strong id="totalArea">0</strong> م²</span>
+                <span>🏢 المراكز: <strong id="totalCenters">0</strong></span>
+                <span>📁 الحالة: <strong id="dataStatus">محملة</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid: Upload + Map -->
+    <div class="grid-2">
+        <div class="card">
+            <h3>📤 رفع ملف الطلبات</h3>
+            <!-- Upload Zone مميز وملون -->
+            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                <p><span>📂</span> اضغط لرفع ملف إكسل</p>
+                <small>يدعم .xlsx, .xls - يتجاهل الصف الأول التلقائي</small>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+            </div>
+            
+            <!-- Action Bar - الأزرار أسفل الفلاتر -->
+            <div class="action-bar">
+                <button class="btn btn-danger" onclick="clearAll()">🗑️ مسح الكل</button>
+                <button class="btn btn-calculate" onclick="recalculateAll()">💳 حساب المستحق</button>
+                <button class="btn btn-info" onclick="openConfig()">⚙️ الشرائح</button>
+                <button class="btn btn-warning" onclick="exportExcel()">📊 تصدير إكسل</button>
+                <button class="btn btn-satellite" onclick="extractSatelliteImages()">🛰️ استخراج الصور</button>
+                <button class="btn btn-earth" onclick="openGoogleEarthAll()">🌍 Google Earth</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrders()">🗑️ حذف المحدد</button>
+                <button class="btn btn-satellite btn-sm" onclick="extractSelectedSatelliteImages()">🛰️ صور المحدد</button>
+                <span id="selectedCountBadge" class="badge badge-info">0 محدد</span>
+            </div>
+            <div class="filters-row">
+                <select id="filterCenter" onchange="applyFilters()">
+                    <option value="all">🏢 جميع المراكز</option>
+                </select>
+                <select id="filterType" onchange="applyFilters()">
+                    <option value="all">جميع الأنواع</option>
+                    <option value="نشاط">🏪 نشاط</option>
+                    <option value="صلاحية موقع">📍 صلاحية موقع</option>
+                </select>
+                <select id="highlightFilter" onchange="applyFilters()">
+                    <option value="all">📋 الكل</option>
+                    <option value="none">✅ عادي</option>
+                    <option value="tier-change">🔁 انتقل شريحة</option>
+                    <option value="fee-diff">💰 فرق رسوم</option>
+                    <option value="area-diff">📐 فرق مساحة</option>
+                </select>
+                <div class="search-group">
+                    <input type="text" id="searchInput" placeholder="🔎 بحث (رقم/مالك)...">
+                    <button class="btn btn-primary" onclick="applyFilters()">بحث</button>
+                    <button class="btn btn-secondary" onclick="clearSearch()">مسح</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🗺️ الخريطة <span style="font-size:11px;font-weight:normal;color:#666;">اضغط على رقم الطلب للتكبير</span></h3>
+            
+            <!-- API Key Box - صغير فوق الخريطة -->
+            <div class="api-key-box">
+                <label>🔑 مفتاح API:</label>
+                <label class="file-label" for="apiKeyFile">📂 رفع ملف .txt</label>
+                <input type="file" id="apiKeyFile" accept=".txt" onchange="handleApiKeyFile(event)">
+                <span id="apiStatus" class="api-status"></span>
+                <span id="fileNameDisplay" class="file-name"></span>
+            </div>
+            
+            <div id="map">
+                <div id="mapLoading">⏳ يرجى رفع ملف المفتاح أولاً</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs + Table -->
+    <div class="card table-card">
+        <div id="tab-orders" class="tab-content active">
+            <div class="table-wrap">
+                <table id="ordersTable">
+                    <thead><tr><th class="checkbox-cell"><input type="checkbox" onchange="toggleSelectAllOrders(this.checked)"></th><th>رقم الطلب</th><th>المالك</th><th>المركز</th><th>النوع</th><th>المساحة</th><th>المدفوع</th><th>المستحق</th><th>المتبقي</th><th>الحالة</th><th>فرق المساحة</th><th>إجراءات</th></tr></thead>
+                    <tbody id="ordersBody"><tr><td colspan="12" style="text-align:center;color:#999;">لا توجد بيانات</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-differences" class="tab-content">
+            <div class="table-wrap">
+                <table id="diffTable">
+                    <thead><tr><th>رقم الطلب</th><th>المالك</th><th>المركز</th><th>النوع</th><th>المساحة</th><th>المدفوع</th><th>المستحق</th><th>المتبقي</th><th>نسبة الفرق</th></tr></thead>
+                    <tbody id="diffBody"><tr><td colspan="9" style="text-align:center;color:#999;">لا توجد فروق</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-centers" class="tab-content">
+            <div class="table-wrap">
+                <table id="centersTable">
+                    <thead><tr><th>المركز</th><th>عدد الطلبات</th><th>إجمالي المساحة</th><th>إجمالي المدفوع</th><th>إجمالي المستحق</th><th>إجمالي المتبقي</th></tr></thead>
+                    <tbody id="centersBody"><tr><td colspan="6" style="text-align:center;color:#999;">لا توجد بيانات</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal" id="configModal"><div class="modal-content"><span class="modal-close" onclick="closeConfig()">&times;</span><h3>⚙️ إدارة شرائح الأسعار</h3><p style="color:#666;margin-bottom:12px;font-size:13px;">القيمة الثابتة لكل شريحة</p><div id="configTableContainer"></div><div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-primary" onclick="saveConfig()">💾 حفظ</button><button class="btn btn-warning" onclick="resetConfig()">↩️ إعادة تعيين</button></div></div></div>
+<div class="modal" id="earthModal"><div class="modal-content" style="max-width:95%;height:90vh;"><span class="modal-close" onclick="closeEarthModal()">&times;</span><h3>🌍 Google Earth</h3><div id="earthContainer" style="width:100%;height:85vh;border-radius:8px;border:1px solid #ddd;"></div></div></div>
+<div class="modal" id="detailModal"><div class="modal-content"><span class="modal-close" onclick="closeDetailModal()">&times;</span><h3>📄 تفاصيل الطلب</h3><div id="detailContent"></div></div></div>
+<div class="modal" id="progressModal"><div class="modal-content" style="max-width:500px;"><span class="modal-close" onclick="closeProgressModal()">&times;</span><h3>🛰️ جاري استخراج الصور</h3><div id="progressStatus" style="text-align:center;margin:12px 0;font-size:14px;">جاري التحميل...</div><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div id="progressDetails" style="text-align:center;color:#666;font-size:12px;"></div><div class="cancel-btn-container"><button class="btn btn-stop" onclick="cancelExtraction()">⏹️ إلغاء</button></div></div></div>
+<div class="modal" id="saveModal"><div class="modal-content" style="max-width:500px;"><span class="modal-close" onclick="closeSaveModal()">&times;</span><h3 id="saveModalTitle">💾 اختيار مكان الحفظ</h3><div class="save-option"><label>📁 المجلد:</label><input type="text" id="savePathInput" placeholder="اختر المجلد..."><button class="btn btn-secondary" onclick="selectFolder()">📂 اختيار</button></div><div id="saveMessage" style="margin:8px 0;color:#666;font-size:12px;"></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success" onclick="confirmSave()">💾 حفظ</button><button class="btn btn-danger" onclick="closeSaveModal()">❌ إلغاء</button></div></div></div>
+
+<script>
+// ============================================================
+// 1. CONFIGURATION
+// ============================================================
+let map = null, polygons = [], orders = [], mapType = 'satellite', mapInitialized = false;
+let currentTableOrders = [];
+let currentActiveTab = 'orders';
+let currentApiKey = '';
+let saveCallback = null, selectedFolderHandle = null;
+let isExtracting = false, shouldCancel = false, extractedImagesData = [];
+let needsMapRefresh = false;
+let focusGuardInterval = null;
+let selectedOrderIds = new Set();
+
+function startExtractionFocusGuard() {
+    stopExtractionFocusGuard();
+    if (!isExtracting) return;
+    ensureExtractionWindowActive();
+    focusGuardInterval = setInterval(() => {
+        if (!isExtracting) {
+            stopExtractionFocusGuard();
+            return;
+        }
+        ensureExtractionWindowActive();
+    }, 200);
+}
+function stopExtractionFocusGuard() {
+    if (focusGuardInterval) {
+        clearInterval(focusGuardInterval);
+        focusGuardInterval = null;
+    }
+}
+function ensureExtractionWindowActive() {
+    try {
+        if (typeof window.focus === 'function') window.focus();
+        if (window.parent && window.parent !== window && typeof window.parent.focus === 'function') window.parent.focus();
+        if (window.top && window.top !== window && typeof window.top.focus === 'function') window.top.focus();
+    } catch (e) {}
+    const progressModal = document.getElementById('progressModal');
+    if (progressModal) {
+        progressModal.style.display = 'flex';
+        progressModal.style.zIndex = '2147483647';
+        progressModal.style.position = 'fixed';
+        progressModal.style.top = '0';
+        progressModal.style.left = '0';
+        progressModal.style.right = '0';
+        progressModal.style.bottom = '0';
+    }
+}
+
+const defaultConfig = {
+    'صلاحية موقع مدينة': [
+        { min: 0, max: 100, price: 2000 },
+        { min: 101, max: 200, price: 2750 },
+        { min: 201, max: 500, price: 3500 },
+        { min: 501, max: Infinity, price: 5000 }
+    ],
+    'صلاحية موقع قرية': [
+        { min: 0, max: 100, price: 1000 },
+        { min: 101, max: 200, price: 1500 },
+        { min: 201, max: 500, price: 2000 },
+        { min: 501, max: Infinity, price: 3000 }
+    ],
+    'نشاط': [
+        { min: 0, max: 50, price: 600 },
+        { min: 51, max: 100, price: 1000 },
+        { min: 101, max: 500, price: 1500 },
+        { min: 501, max: 1000, price: 3000 },
+        { min: 1001, max: Infinity, price: 3000 }
+    ]
+};
+let config = JSON.parse(JSON.stringify(defaultConfig));
+const typeNames = { 'صلاحية موقع مدينة': '📍 موقع - مدينة', 'صلاحية موقع قرية': '📍 موقع - قرية', 'نشاط': '🏪 نشاط' };
+const typeCategories = { 'صلاحية موقع مدينة': 'صلاحية موقع', 'صلاحية موقع قرية': 'صلاحية موقع', 'نشاط': 'نشاط' };
+let allCenters = [];
+
+// ============================================================
+// 2. دوال تحويل نوع الطلب
+// ============================================================
+function mapRequestType(value) {
+    if (!value) return 'نشاط';
+    const str = String(value).trim().toLowerCase();
+    if (str === '1' || str === 'مدينة' || str === 'رخص المدن' || str.includes('مدينة') || str.includes('رخص المدن')) return 'صلاحية موقع مدينة';
+    if (str === '2' || str === 'قرية' || str === 'رخص القرى' || str.includes('قرية') || str.includes('رخص القرى')) return 'صلاحية موقع قرية';
+    if (str === '3' || str === 'نشاط' || str === 'رخص المحال' || str.includes('نشاط') || str.includes('رخص المحال')) return 'نشاط';
+    return 'نشاط';
+}
+
+function getCenterFromCode(requestNumber) {
+    if (!requestNumber) return 'مركز غير معروف';
+    const str = String(requestNumber);
+    let center = '';
+    const c3 = str.substring(0, 3), c4 = str.substring(0, 4);
+    switch (c3) { case '606': center = 'العدوة'; break; case '604': center = 'مغاغة'; break; case '605': center = 'بني مزار'; break; case '610': center = 'مطاي'; break; case '609': center = 'سمالوط'; break; case '602': center = 'المنيا'; break; case '608': center = 'ابوقرقاص'; break; case '603': center = 'ملوي'; break; case '607': center = 'ديرمواس'; break; }
+    if (!center) { switch (c4) { case '2061': case '2054': case '2053': case '2060': center = 'العدوة'; break; case '2062': case '2055': case '2056': case '2078': case '2082': center = 'ديرمواس'; break; case '2059': case '2057': case '2058': case '2064': case '2065': case '2076': case '2077': case '2083': case '2098': center = 'ملوي'; break; case '2067': case '2068': case '2072': case '2095': case '2097': case '2096': center = 'مغاغة'; break; case '2069': case '2070': case '2071': case '2073': case '2074': case '2075': case '2080': case '2079': center = 'ابوقرقاص'; break; } }
+    return center || 'مركز غير معروف';
+}
+
+function cleanAreaValue(value) {
+    if (value === undefined || value === null || value === '') return null;
+    let str = String(value);
+    let cleaned = str.replace(/[^0-9.,]/g, '');
+    let numbers = cleaned.match(/\d+[.,]?\d*/g);
+    if (!numbers) return null;
+    let numStr = numbers[0].replace(',', '.');
+    const parsed = parseFloat(numStr);
+    return isNaN(parsed) ? null : parsed;
+}
+
+function isMissingNumericValue(value) {
+    return value === null || value === undefined || value === '' || Number.isNaN(value);
+}
+
+function formatNumberValue(value, fallback = '—') {
+    return Number.isFinite(value) ? value.toFixed(2) : fallback;
+}
+
+function getOrderMissingFields(order) {
+    const missingFields = [];
+    if (!order) return missingFields;
+    if (isMissingNumericValue(order.area) || Number(order.area) <= 0) missingFields.push('المساحة');
+    if (isMissingNumericValue(order.paid) || Number(order.paid) < 0) missingFields.push('المبلغ المسدد');
+    if (!order.northernBorder || !order.southernBorder || !order.easternBorder || !order.westernBorder) missingFields.push('حدود الطلب');
+    if (!order.coords || order.coords.length < 3) missingFields.push('الإحداثيات');
+    return missingFields;
+}
+
+function calculatePolygonAreaInSquareMeters(coords) {
+    if (!coords || coords.length < 3) return 0;
+    const earthRadius = 6378137;
+    let total = 0;
+    for (let i = 0; i < coords.length; i++) {
+        const p1 = coords[i];
+        const p2 = coords[(i + 1) % coords.length];
+        const lat1 = p1.lat * Math.PI / 180;
+        const lon1 = p1.lng * Math.PI / 180;
+        const lat2 = p2.lat * Math.PI / 180;
+        const lon2 = p2.lng * Math.PI / 180;
+        total += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+    }
+    return Math.abs(total) * earthRadius * earthRadius / 2;
+}
+
+function ensureOrderAreaMetrics(order) {
+    if (!order) return order;
+    const hasCoords = Array.isArray(order.coords) && order.coords.length >= 3;
+    const computedArea = hasCoords ? calculatePolygonAreaInSquareMeters(order.coords || []) : null;
+    if (order.drawnArea === undefined || order.areaDifference === undefined) {
+        order.drawnArea = computedArea;
+        order.areaDifference = hasCoords && Number.isFinite(order.area) && order.area > 0 ? computedArea - order.area : null;
+    }
+    return order;
+}
+
+// ============================================================
+// دالة ترتيب النقاط المحسنة (تجنب التشويه)
+// ============================================================
+function sortPointsByAngle(coords) {
+    if (!coords || coords.length < 3) return coords;
+    
+    // إزالة النقاط المكررة
+    const unique = [];
+    const seen = new Set();
+    coords.forEach(p => {
+        const key = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(p);
+        }
+    });
+    
+    if (unique.length < 3) return unique;
+    
+    // حساب المركز
+    let centerLat = 0, centerLng = 0;
+    unique.forEach(c => { centerLat += c.lat; centerLng += c.lng; });
+    centerLat /= unique.length;
+    centerLng /= unique.length;
+    
+    // ترتيب حسب الزاوية
+    const sorted = [...unique].sort((a, b) => {
+        const angleA = Math.atan2(a.lat - centerLat, a.lng - centerLng);
+        const angleB = Math.atan2(b.lat - centerLat, b.lng - centerLng);
+        return angleA - angleB;
+    });
+    
+    // التحقق من أن البوليجون الناتج غير متقاطع (self-intersecting)
+    // إذا كان متقاطعاً، استخدم Convex Hull
+    if (isSelfIntersecting(sorted)) {
+        console.warn('⚠️ البوليجون متقاطع، استخدام Convex Hull');
+        return convexHull(unique);
+    }
+    
+    return sorted;
+}
+
+// ============================================================
+// دالة التحقق من تقاطع البوليجون مع نفسه
+// ============================================================
+function isSelfIntersecting(polygon) {
+    const n = polygon.length;
+    if (n < 4) return false;
+    
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            // التحقق من تقاطع الضلعين (i, i+1) و (j, j+1)
+            const p1 = polygon[i];
+            const p2 = polygon[(i + 1) % n];
+            const p3 = polygon[j];
+            const p4 = polygon[(j + 1) % n];
+            
+            // تجاهل الضلوع المتجاورة
+            if ((i + 1) % n === j || (j + 1) % n === i) continue;
+            
+            if (doLinesIntersect(p1, p2, p3, p4)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// دالة التحقق من تقاطع خطين
+// ============================================================
+function doLinesIntersect(p1, p2, p3, p4) {
+    function ccw(a, b, c) {
+        return (c.lng - a.lng) * (b.lat - a.lat) - (b.lng - a.lng) * (c.lat - a.lat);
+    }
+    const d1 = ccw(p3, p4, p1);
+    const d2 = ccw(p3, p4, p2);
+    const d3 = ccw(p1, p2, p3);
+    const d4 = ccw(p1, p2, p4);
+    return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) && (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0);
+}
+
+// ============================================================
+// خوارزمية Convex Hull (البوليجون المحدب)
+// ============================================================
+function convexHull(points) {
+    if (points.length < 3) return points;
+    
+    const sorted = [...points].sort((a, b) => {
+        if (a.lat === b.lat) return a.lng - b.lng;
+        return a.lat - b.lat;
+    });
+    
+    const lower = [];
+    for (let i = 0; i < sorted.length; i++) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], sorted[i]) <= 0) {
+            lower.pop();
+        }
+        lower.push(sorted[i]);
+    }
+    
+    const upper = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], sorted[i]) <= 0) {
+            upper.pop();
+        }
+        upper.push(sorted[i]);
+    }
+    
+    lower.pop();
+    upper.pop();
+    return [...lower, ...upper];
+}
+
+function cross(o, a, b) {
+    return (a.lat - o.lat) * (b.lng - o.lng) - (a.lng - o.lng) * (b.lat - o.lat);
+}
+// ============================================================
+// 3. CALCULATE DUE (مع تحديث النشاط للزيادة عن 1000)
+// ============================================================
+function calculateDue(area, typeId) {
+    // التأكد من وجود config للنوع
+    if (!config || !config[typeId]) {
+        if (defaultConfig[typeId]) config[typeId] = JSON.parse(JSON.stringify(defaultConfig[typeId]));
+        else typeId = 'نشاط';
+    }
+    const tiers = config[typeId] || config['نشاط'];
+    if (!tiers || tiers.length === 0) return 0;
+
+    // ============================================
+    // حالة خاصة: نوع النشاط و المساحة > 1000
+    // ============================================
+    if (typeId === 'نشاط' && area > 1000) {
+        // حساب أول 1000 متر (تراكمي)
+        const first1000Cost = 600 + 1000 + 1500 + 3000; // 6100
+        const excessArea = area - 1000;
+        let pricePerMeter = 0;
+        if (excessArea <= 50) pricePerMeter = 600 / 50;
+        else if (excessArea <= 100) pricePerMeter = 1000 / 50;
+        else if (excessArea <= 500) pricePerMeter = 1500 / 400;
+        else pricePerMeter = 3000 / 500;
+        return first1000Cost + (excessArea * pricePerMeter);
+    }
+
+    // ============================================
+    // الحالة العادية: إرجاع قيمة الشريحة فقط (غير تراكمي)
+    // ============================================
+    const sortedTiers = [...tiers].sort((a, b) => a.min - b.min);
+
+    for (let i = 0; i < sortedTiers.length; i++) {
+        const tier = sortedTiers[i];
+        // الشريحة الأولى: من 0 إلى max
+        if (i === 0 && area <= tier.max) {
+            return tier.price;
+        }
+        // الشرائح التالية: من min إلى max
+        if (i > 0 && area > tier.min && area <= tier.max) {
+            return tier.price;
+        }
+    }
+
+    // إذا كانت المساحة أكبر من آخر شريحة
+    const lastTier = sortedTiers[sortedTiers.length - 1];
+    if (area > lastTier.min) {
+        return lastTier.price;
+    }
+
+    // حل احتياطي (أول شريحة)
+    return sortedTiers[0].price;
+}
+// ============================================================
+// 4. API KEY MANAGEMENT (رفع ملف نصي)
+// ============================================================
+function handleApiKeyFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const content = e.target.result.trim();
+            if (!content) {
+                document.getElementById('apiStatus').className = 'api-status error';
+                document.getElementById('apiStatus').textContent = '❌ الملف فارغ';
+                return;
+            }
+            currentApiKey = content;
+            document.getElementById('fileNameDisplay').textContent = '✅ ' + file.name;
+            document.getElementById('apiStatus').className = 'api-status loading';
+            document.getElementById('apiStatus').textContent = '⏳ جاري التحديث...';
+            updateApiKey(currentApiKey, function(success) {
+                if (success) {
+                    document.getElementById('apiStatus').className = 'api-status success';
+                    document.getElementById('apiStatus').textContent = '✅ تم التحديث';
+                } else {
+                    document.getElementById('apiStatus').className = 'api-status error';
+                    document.getElementById('apiStatus').textContent = '❌ فشل التحديث';
+                }
+            });
+        } catch (err) {
+            document.getElementById('apiStatus').className = 'api-status error';
+            document.getElementById('apiStatus').textContent = '❌ خطأ في القراءة';
+            console.error(err);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function updateApiKey(apiKey, callback) {
+    if (!apiKey || apiKey === '') {
+        if (callback) callback(false);
+        return;
+    }
+    const oldScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (oldScript) oldScript.remove();
+    if (map) { map = null; mapInitialized = false; }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=drawing,geometry&v=3&callback=initMap`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = function() {
+        document.getElementById('mapLoading').innerHTML = '❌ فشل تحميل الخريطة. تأكد من المفتاح.';
+        if (callback) callback(false);
+    };
+    window.initMapCallback = function() {
+        if (callback) callback(true);
+    };
+    document.head.appendChild(script);
+    try { localStorage.setItem('googleMapsApiKey', apiKey); } catch(e) {}
+}
+
+// ============================================================
+// 5. GOOGLE MAPS INIT
+// ============================================================
+function initMap() {
+    try {
+        const center = { lat: 26.8206, lng: 30.8025 };
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 6,
+            center: center,
+            mapTypeId: 'satellite',
+            mapTypeControl: true,
+            fullscreenControl: true,
+            streetViewControl: false
+        });
+        mapInitialized = true;
+        document.getElementById('mapLoading').style.display = 'none';
+        if (orders && orders.length > 0) renderMap();
+        if (window.initMapCallback) { window.initMapCallback(); window.initMapCallback = null; }
+        console.log('✅ تم تهيئة الخريطة');
+    } catch (error) {
+        console.error('❌ خطأ في تهيئة الخريطة:', error);
+        document.getElementById('mapLoading').innerHTML = '❌ حدث خطأ في تحميل الخريطة. تأكد من المفتاح.';
+        if (window.initMapCallback) { window.initMapCallback(false); window.initMapCallback = null; }
+    }
+}
+
+// ============================================================
+// 6. FILE HANDLING (رفع الإكسل)
+// ============================================================
+function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            if (!rows || rows.length === 0) { alert('⚠️ الملف فارغ'); return; }
+
+            let headerRowIndex = -1, headerRow = null;
+            const knownColumns = ['اسم طالب الخدمة', 'الرقم القومى', 'المركز', 'رقم الطلب', 'نوع الطلب', 'المساحة', 'قيمة السداد', 'RequestNumber', 'OwnerName', 'Area', 'Budget', 'Lat', 'Long', 'RequestTypeID', 'Center'];
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0) continue;
+                const rowStr = row.join(' ').toLowerCase();
+                for (let col of knownColumns) {
+                    if (rowStr.includes(col.toLowerCase())) { headerRowIndex = i; headerRow = row; break; }
+                }
+                if (headerRowIndex !== -1) break;
+            }
+            if (headerRowIndex === -1) { alert('⚠️ لم يتم العثور على أسماء الأعمدة.'); return; }
+
+            const dataRows = rows.slice(headerRowIndex + 1);
+            const json = dataRows.map(row => {
+                const obj = {};
+                headerRow.forEach((colName, idx) => { const key = String(colName).trim(); obj[key] = row[idx] !== undefined ? row[idx] : ''; });
+                return obj;
+            }).filter(row => Object.values(row).some(v => v !== ''));
+            if (!json || json.length === 0) { alert('⚠️ لا توجد بيانات'); return; }
+            processOrders(json);
+            document.getElementById('dataStatus').textContent = `✅ ${json.length} طلب`;
+            document.getElementById('dataStatus').style.color = 'green';
+        } catch (err) { alert('❌ خطأ: ' + err.message); console.error(err); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ============================================================
+// ============================================================
+// دالة processOrders كاملة (مع التوابع المساعدة)
+// ============================================================
+
+// ============================================================
+// التوابع المساعدة (يجب أن تكون معرفة قبل processOrders)
+// ============================================================
+
+// دالة ترتيب النقاط حسب الزاوية (محسنة)
+function sortPointsByAngle(coords) {
+    if (!coords || coords.length < 3) return coords;
+    
+    // إزالة النقاط المكررة
+    const unique = [];
+    const seen = new Set();
+    coords.forEach(p => {
+        const key = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(p);
+        }
+    });
+    
+    if (unique.length < 3) return unique;
+    
+    // حساب المركز
+    let centerLat = 0, centerLng = 0;
+    unique.forEach(c => { centerLat += c.lat; centerLng += c.lng; });
+    centerLat /= unique.length;
+    centerLng /= unique.length;
+    
+    // ترتيب حسب الزاوية
+    const sorted = [...unique].sort((a, b) => {
+        const angleA = Math.atan2(a.lat - centerLat, a.lng - centerLng);
+        const angleB = Math.atan2(b.lat - centerLat, b.lng - centerLng);
+        return angleA - angleB;
+    });
+    
+    // التحقق من أن البوليجون الناتج غير متقاطع
+    if (isSelfIntersecting(sorted)) {
+        console.warn('⚠️ البوليجون متقاطع، استخدام Convex Hull');
+        return convexHull(unique);
+    }
+    
+    return sorted;
+}
+
+// دالة التحقق من تقاطع البوليجون مع نفسه
+function isSelfIntersecting(polygon) {
+    const n = polygon.length;
+    if (n < 4) return false;
+    
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            const p1 = polygon[i];
+            const p2 = polygon[(i + 1) % n];
+            const p3 = polygon[j];
+            const p4 = polygon[(j + 1) % n];
+            
+            if ((i + 1) % n === j || (j + 1) % n === i) continue;
+            
+            if (doLinesIntersect(p1, p2, p3, p4)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// دالة التحقق من تقاطع خطين
+function doLinesIntersect(p1, p2, p3, p4) {
+    function ccw(a, b, c) {
+        return (c.lng - a.lng) * (b.lat - a.lat) - (b.lng - a.lng) * (c.lat - a.lat);
+    }
+    const d1 = ccw(p3, p4, p1);
+    const d2 = ccw(p3, p4, p2);
+    const d3 = ccw(p1, p2, p3);
+    const d4 = ccw(p1, p2, p4);
+    return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) && (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0);
+}
+
+// خوارزمية Convex Hull
+function convexHull(points) {
+    if (points.length < 3) return points;
+    
+    const sorted = [...points].sort((a, b) => {
+        if (a.lat === b.lat) return a.lng - b.lng;
+        return a.lat - b.lat;
+    });
+    
+    const lower = [];
+    for (let i = 0; i < sorted.length; i++) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], sorted[i]) <= 0) {
+            lower.pop();
+        }
+        lower.push(sorted[i]);
+    }
+    
+    const upper = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], sorted[i]) <= 0) {
+            upper.pop();
+        }
+        upper.push(sorted[i]);
+    }
+    
+    lower.pop();
+    upper.pop();
+    return [...lower, ...upper];
+}
+
+function cross(o, a, b) {
+    return (a.lat - o.lat) * (b.lng - o.lng) - (a.lng - o.lng) * (b.lat - o.lat);
+}
+
+// ============================================================
+// دالة processOrders الرئيسية
+// ============================================================
+function processOrders(data) {
+    if (!data || data.length === 0) {
+        console.warn('⚠️ لا توجد بيانات للمعالجة');
+        return;
+    }
+    
+    orders = data.map((row, index) => {
+        // ============================================
+        // 1. استخراج الإحداثيات من أعمدة متعددة
+        // ============================================
+        let coords = [];
+        for (let i = 0; i <= 7; i++) {
+            let lat = null, lng = null;
+            
+            // أسماء الأعمدة المحتملة
+            const latKeys = [
+                i === 0 ? 'Lat' : `Lat${i}`,
+                i === 0 ? 'خط العرض' : `خط العرض${i}`,
+                i === 0 ? 'latitude' : `latitude${i}`,
+                `lat${i}`,
+                i === 0 ? 'عرض' : `عرض${i}`
+            ];
+            const lngKeys = [
+                i === 0 ? 'Long' : `Long${i}`,
+                i === 0 ? 'خط الطول' : `خط الطول${i}`,
+                i === 0 ? 'longitude' : `longitude${i}`,
+                `lng${i}`,
+                i === 0 ? 'طول' : `طول${i}`
+            ];
+            
+            // محاولة كل المفاتيح
+            for (let k of latKeys) {
+                if (row[k] !== undefined && row[k] !== '' && row[k] !== null) {
+                    const val = parseFloat(row[k]);
+                    if (!isNaN(val) && val !== 0) {
+                        lat = val;
+                        break;
+                    }
+                }
+            }
+            for (let k of lngKeys) {
+                if (row[k] !== undefined && row[k] !== '' && row[k] !== null) {
+                    const val = parseFloat(row[k]);
+                    if (!isNaN(val) && val !== 0) {
+                        lng = val;
+                        break;
+                    }
+                }
+            }
+            
+            if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                coords.push({ lat, lng });
+            }
+        }
+        
+        // ============================================
+        // 2. إصلاح ترتيب النقاط (تجنب التشويه)
+        // ============================================
+        if (coords.length >= 3) {
+            coords = sortPointsByAngle(coords);
+        }
+        
+        // ============================================
+        // 3. قراءة البيانات الأساسية
+        // ============================================
+        const requestNumber = String(row['رقم الطلب'] || row['RequestNumber'] || index + 1);
+        const owner = row['اسم طالب الخدمة'] || row['OwnerName'] || 'غير محدد';
+        const center = row['المركز'] || row['Center'] || getCenterFromCode(requestNumber);
+        const area = cleanAreaValue(row['المساحة'] || row['Area']);
+        const paid = cleanAreaValue(row['قيمة السداد'] || row['Budget']);
+        const requestDate = row['تاريخ الطلب'] || row['RequestDate'] || '';
+        
+        // ============================================
+        // 4. تحديد نوع الطلب
+        // ============================================
+        const rawType = row['نوع الطلب'] || row['RequestTypeID'] || '';
+        const typeId = mapRequestType(rawType);
+        
+        // ============================================
+        // 5. حساب المستحق
+        // ============================================
+        const hasArea = Number.isFinite(area) && area > 0;
+        const hasPaid = Number.isFinite(paid) && paid >= 0;
+        const hasCoords = coords && coords.length >= 3;
+        const due = hasArea ? calculateDue(area, typeId) : null;
+        const remaining = hasArea && hasPaid && Number.isFinite(due) ? due - paid : null;
+        const status = !hasArea || !hasPaid || !hasCoords ? 'بيانات ناقصة' : (remaining <= 0 ? 'مكتمل' : (remaining > 0 && remaining < due * 0.5 ? 'متبقي' : 'غير مستوفى'));
+        const drawnArea = hasCoords ? calculatePolygonAreaInSquareMeters(coords) : null;
+        const areaDifference = hasArea && hasCoords ? drawnArea - area : null;
+        
+        // ============================================
+        // 6. إرجاع كائن الطلب
+        // ============================================
+        return {
+            id: requestNumber,
+            owner: owner,
+            center: center,
+            date: requestDate,
+            typeId: typeId,
+            typeName: typeNames[typeId] || typeId,
+            typeCategory: typeCategories[typeId] || 'نشاط',
+            coords: coords,
+            area: area,
+            drawnArea: drawnArea,
+            areaDifference: areaDifference,
+            paid: paid,
+            due: due,
+            remaining: remaining,
+            status: status,
+            northernBorder: row['NorthernBorder'] || row['الحد الشمالي'] || '',
+            southernBorder: row['SouthernBorder'] || row['الحد الجنوبي'] || '',
+            easternBorder: row['EasternBorder'] || row['الحد الشرقي'] || '',
+            westernBorder: row['WesternBorder'] || row['الحد الغربي'] || ''
+        };
+    });
+    
+    // ============================================
+    // 7. تحديث المراكز الفريدة
+    // ============================================
+    allCenters = [...new Set(orders.map(o => o.center))].filter(c => c && c !== 'مركز غير معروف' && c !== 'غير محدد' && c !== '');
+    updateCenterFilter();
+    saveToLocalStorage();
+    renderAll();
+    updateStats();
+}
+function recalculateAll() {
+    if (!orders || orders.length === 0) { alert('⚠️ لا توجد طلبات'); return; }
+    let count = 0;
+    orders.forEach(order => {
+        const hasArea = Number.isFinite(order.area) && order.area > 0;
+        const hasPaid = Number.isFinite(order.paid) && order.paid >= 0;
+        const hasCoords = Array.isArray(order.coords) && order.coords.length >= 3;
+        const newDue = hasArea ? calculateDue(order.area, order.typeId) : null;
+        const computedArea = hasCoords ? calculatePolygonAreaInSquareMeters(order.coords || []) : null;
+        order.due = newDue;
+        order.drawnArea = computedArea;
+        order.areaDifference = hasArea && hasCoords ? computedArea - order.area : null;
+        order.remaining = hasArea && hasPaid && Number.isFinite(order.due) ? order.due - order.paid : null;
+        order.status = !hasArea || !hasPaid || !hasCoords ? 'بيانات ناقصة' : (order.remaining <= 0 ? 'مكتمل' : (order.remaining > 0 && order.remaining < order.due * 0.5 ? 'متبقي' : 'غير مستوفى'));
+        count++;
+    });
+    saveToLocalStorage(); renderAll(); updateStats();
+    alert(`✅ تم إعادة حساب ${count} طلب`);
+}
+
+function updateCenterFilter() {
+    const select = document.getElementById('filterCenter');
+    select.innerHTML = '<option value="all">🏢 جميع المراكز</option>';
+    if (allCenters && allCenters.length > 0) allCenters.forEach(c => { select.innerHTML += `<option value="${c}">🏢 ${c}</option>`; });
+}
+
+// ============================================================
+// 8. RENDER FUNCTIONS
+// ============================================================
+function renderAll() { renderOrdersTable(); renderDiffTable(); renderCentersTable(); if (mapInitialized && map) renderMap(); }
+
+function getTierIndexForArea(area, typeId) {
+    const tiers = config[typeId] || [];
+    for (let i = 0; i < tiers.length; i++) {
+        const tier = tiers[i];
+        if (area >= tier.min && (tier.max === Infinity || area <= tier.max)) return i;
+    }
+    return -1;
+}
+
+function getOrderHighlightType(order) {
+    ensureOrderAreaMetrics(order);
+    const missingFields = getOrderMissingFields(order);
+    if (missingFields.length) return 'none';
+    const originalTier = getTierIndexForArea(order.area || 0, order.typeId);
+    const drawnTier = getTierIndexForArea(order.drawnArea || 0, order.typeId);
+    if (originalTier !== -1 && drawnTier !== -1 && originalTier !== drawnTier) return 'tier-change';
+    if ((order.remaining || 0) > 0.01) return 'fee-diff';
+    if (Math.abs(order.areaDifference || 0) > 10) return 'area-diff';
+    return 'none';
+}
+
+function getOrderResponseState(order) {
+    ensureOrderAreaMetrics(order);
+    const messages = [];
+    const missingFields = getOrderMissingFields(order);
+
+    if (missingFields.length) {
+        return {
+            hasIssue: true,
+            text: `يوجد بيانات أساسية غير مكتملة: ${missingFields.join(', ')}`
+        };
+    }
+
+    const originalTier = getTierIndexForArea(order.area || 0, order.typeId);
+    const drawnTier = getTierIndexForArea(order.drawnArea || 0, order.typeId);
+
+    if (originalTier !== -1 && drawnTier !== -1 && originalTier !== drawnTier) {
+        messages.push('الإحداثيات غير مطابقة للأطوال والمساحة حيث أن مساحة الإحداثيات تتجاوز سعر الشريحة الحالية');
+    } else if (Math.abs(order.areaDifference || 0) > 10) {
+        messages.push('الإحداثيات غير مطابقة للأطوال والمساحة');
+    }
+
+    if ((order.remaining || 0) > 0.01) {
+        messages.push(`يوجد فرق قيمة السداد بمبلغ ${Math.abs(order.remaining).toFixed(2)} ج.م`);
+    }
+
+    return {
+        hasIssue: messages.length > 0,
+        text: messages.join('\n')
+    };
+}
+
+function copyOrderResponse(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    const responseState = getOrderResponseState(order);
+    if (!responseState.hasIssue) return;
+    const text = responseState.text;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('✅ تم نسخ الرد');
+        }).catch(() => {
+            prompt('نسخ الرد', text);
+        });
+    } else {
+        prompt('نسخ الرد', text);
+    }
+}
+
+function buildOrderRowHtml(order) {
+    ensureOrderAreaMetrics(order);
+    const typeClass = order.typeCategory === 'نشاط' ? 'type-badge activity' : 'type-badge location';
+    const missingFields = getOrderMissingFields(order);
+    const areaDiff = Number.isFinite(order.areaDifference) ? order.areaDifference : 0;
+    const diffText = areaDiff >= 0 ? `+${areaDiff.toFixed(2)}` : `${areaDiff.toFixed(2)}`;
+    const diffColor = areaDiff >= 0 ? '#d32f2f' : '#c62828';
+    const highlightType = getOrderHighlightType(order);
+    let rowClass = '';
+    let badgeText = '';
+    if (highlightType === 'tier-change') {
+        rowClass = 'row-tier-change';
+        badgeText = 'انتقل شريحة';
+    } else if (highlightType === 'fee-diff') {
+        rowClass = 'row-diff-red';
+        badgeText = 'فرق رسوم';
+    } else if (highlightType === 'area-diff') {
+        rowClass = 'row-diff-yellow';
+        badgeText = 'فرق مساحة';
+    }
+    const checked = selectedOrderIds.has(order.id) ? 'checked' : '';
+    const responseState = getOrderResponseState(order);
+    const responseButton = responseState.hasIssue ? `<button class="btn btn-warning btn-sm" onclick="copyOrderResponse('${order.id}')" title="نسخ الرد">📋</button>` : '';
+    const areaText = formatNumberValue(order.area, '—');
+    const paidText = formatNumberValue(order.paid, '—');
+    const dueText = formatNumberValue(order.due, '—');
+    const remainingText = formatNumberValue(order.remaining, '—');
+    const remainingColor = missingFields.length ? '#999' : (order.remaining > 0 ? '#f44336' : '#4CAF50');
+    const statusText = order.status || 'بيانات ناقصة';
+    const statusClass = statusText === 'مكتمل' ? 'badge-success' : statusText === 'متبقي' ? 'badge-warning' : statusText === 'بيانات ناقصة' ? 'badge-secondary' : 'badge-danger';
+    const diffDisplay = Number.isFinite(order.areaDifference) ? `${diffText}${badgeText ? `<span class="highlight-badge">${badgeText}</span>` : ''}` : '—';
+    return `<tr class="${rowClass}">
+        <td class="checkbox-cell"><input type="checkbox" ${checked} onchange="toggleSelectedOrder('${order.id}', this.checked)"></td>
+        <td><span class="clickable-id" onclick="zoomToOrder('${order.id}')">${order.id}</span></td>
+        <td>${order.owner}</td>
+        <td><span class="center-badge">${order.center}</span></td>
+        <td><span class="${typeClass}">${order.typeName}</span></td>
+        <td>${areaText}</td>
+        <td>${paidText}</td>
+        <td><strong style="color:#1a3a5c;">${dueText}</strong></td>
+        <td style="color:${remainingColor};font-weight:bold;">${remainingText}</td>
+        <td><span class="badge ${statusClass}">${statusText}</span></td>
+        <td style="color:${diffColor};font-weight:bold;">${diffDisplay}</td>
+        <td><div class="btn-group" style="display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;">${responseButton}</div></td>
+    </tr>`;
+}
+
+function renderOrdersTable(ordersList = orders) {
+    currentTableOrders = Array.isArray(ordersList) ? ordersList : [];
+    const tbody = document.getElementById('ordersBody');
+    if (!ordersList || ordersList.length === 0) { tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#999;">لا توجد بيانات</td></tr>`; return; }
+    tbody.innerHTML = ordersList.map(order => buildOrderRowHtml(order)).join('');
+    updateSelectedCountBadge();
+}
+
+function updateSelectedCountBadge() {
+    const badge = document.getElementById('selectedCountBadge');
+    if (badge) badge.textContent = `${selectedOrderIds.size} محدد`;
+}
+
+function toggleSelectedOrder(orderId, checked) {
+    if (checked) selectedOrderIds.add(orderId);
+    else selectedOrderIds.delete(orderId);
+    updateSelectedCountBadge();
+}
+
+function toggleSelectAllOrders(checked) {
+    const allOrders = orders || [];
+    if (checked === undefined) {
+        checked = selectedOrderIds.size !== allOrders.length;
+    }
+    if (checked) {
+        allOrders.forEach(order => selectedOrderIds.add(order.id));
+    } else {
+        selectedOrderIds.clear();
+    }
+    renderOrdersTable();
+}
+
+function deleteSelectedOrders() {
+    if (!selectedOrderIds.size) { alert('⚠️ لم يتم تحديد أي طلب'); return; }
+    if (!confirm('🗑️ حذف الطلبات المحددة؟')) return;
+    orders = orders.filter(order => !selectedOrderIds.has(order.id));
+    allCenters = [...new Set(orders.map(o => o.center))].filter(c => c && c !== 'مركز غير معروف' && c !== 'غير محدد' && c !== '');
+    selectedOrderIds.clear();
+    updateCenterFilter();
+    saveToLocalStorage();
+    renderAll();
+    updateStats();
+}
+
+function extractSelectedSatelliteImages() {
+    if (!selectedOrderIds.size) { alert('⚠️ لم يتم تحديد أي طلب'); return; }
+    const selectedOrders = orders.filter(order => selectedOrderIds.has(order.id));
+    const validOrders = selectedOrders.filter(o => o.coords && o.coords.length >= 3);
+    if (!validOrders.length) { alert('⚠️ لا توجد طلبات محددة بصور مناسبة'); return; }
+    selectImageDestination(function(folderHandle) { startImageExtraction(validOrders, folderHandle); });
+}
+
+function renderDiffTable() {
+    const tbody = document.getElementById('diffBody');
+    if (!orders || orders.length === 0) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#999;">لا توجد بيانات</td></tr>`; return; }
+    const filtered = orders.filter(o => o.remaining > 0);
+    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#999;">✅ جميع الطلبات مكتملة</td></tr>`; return; }
+    tbody.innerHTML = filtered.map(order => `<tr><td><span class="clickable-id" onclick="zoomToOrder('${order.id}')">${order.id}</span></td><td>${order.owner}</td><td>${order.center}</td><td>${order.typeName}</td><td>${formatNumberValue(order.area, '—')}</td><td>${formatNumberValue(order.paid, '—')}</td><td>${formatNumberValue(order.due, '—')}</td><td class="diff-positive">${formatNumberValue(order.remaining, '—')}</td><td>${Number.isFinite(order.due) && order.due>0 && Number.isFinite(order.remaining)?((order.remaining/order.due)*100).toFixed(1):0}%</td></tr>`).join('');
+}
+
+function renderCentersTable() {
+    const tbody = document.getElementById('centersBody');
+    if (!orders || orders.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;">لا توجد بيانات</td></tr>`; return; }
+    const centersData = {};
+    orders.forEach(o => { const name = o.center || 'غير محدد'; if (!centersData[name]) centersData[name] = { count:0, totalArea:0, totalPaid:0, totalDue:0, totalRemaining:0 }; centersData[name].count++; centersData[name].totalArea += o.area; centersData[name].totalPaid += o.paid; centersData[name].totalDue += o.due; centersData[name].totalRemaining += o.remaining; });
+    const entries = Object.entries(centersData);
+    if (!entries.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;">لا توجد بيانات</td></tr>`; return; }
+    tbody.innerHTML = entries.map(([center, data]) => `<tr><td><strong>${center}</strong></td><td>${data.count}</td><td>${data.totalArea.toFixed(2)}</td><td>${data.totalPaid.toFixed(2)}</td><td>${data.totalDue.toFixed(2)}</td><td style="color:${data.totalRemaining>0?'#f44336':'#4CAF50'};font-weight:bold;">${data.totalRemaining.toFixed(2)}</td></tr>`).join('');
+}
+
+// ============================================================
+// 9. RENDER MAP
+// ============================================================
+function renderMap() {
+    if (!mapInitialized || !map) return;
+    polygons.forEach(p => p.setMap(null)); polygons = [];
+    if (!orders || orders.length === 0) return;
+    orders.forEach(order => {
+        if (!order.coords || order.coords.length < 3) return;
+        try {
+            const path = order.coords.map(c => new google.maps.LatLng(c.lat, c.lng));
+            const color = order.remaining > 0 ? (order.remaining > order.due * 0.5 ? '#f44336' : '#ff9800') : '#4CAF50';
+            const polygon = new google.maps.Polygon({ paths: path, strokeColor: color, strokeOpacity: 0.8, strokeWeight: 2, fillColor: color, fillOpacity: 0.3, title: `طلب ${order.id}` });
+            polygon.setMap(map); polygons.push(polygon);
+            const center = getPolygonCenter(path);
+            const infoWindow = new google.maps.InfoWindow({ content: `<div style="padding:10px;font-size:13px;direction:rtl;"><strong onclick="zoomToOrder('${order.id}')" style="cursor:pointer;color:#1a3a5c;">طلب #${order.id}</strong><br>المالك: ${order.owner}<br>المركز: ${order.center}<br>النوع: ${order.typeName}<br>المساحة: ${order.area.toFixed(2)} م²<br>المستحق: ${order.due.toFixed(2)} ج.م<br>المتبقي: <span style="color:${order.remaining>0?'#f44336':'#4CAF50'}">${order.remaining.toFixed(2)} ج.م</span></div>` });
+            google.maps.event.addListener(polygon, 'click', function() { infoWindow.open(map, polygon); infoWindow.setPosition(center); });
+        } catch(e) { console.warn('⚠️ خطأ في رسم بوليجون:', e); }
+    });
+}
+function getPolygonCenter(path) { let lat=0,lng=0; path.forEach(p=>{lat+=p.lat(); lng+=p.lng();}); return new google.maps.LatLng(lat/path.length, lng/path.length); }
+
+// ============================================================
+// 10. ZOOM TO ORDER
+// ============================================================
+function zoomToOrder(orderId) {
+    if (!mapInitialized || !map) { alert('⏳ الخريطة لم يتم تحميلها'); return; }
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !order.coords || order.coords.length < 3) { alert('لا توجد إحداثيات كافية'); return; }
+    const bounds = new google.maps.LatLngBounds();
+    order.coords.forEach(c => bounds.extend(new google.maps.LatLng(c.lat, c.lng)));
+    map.fitBounds(bounds); map.setZoom(18);
+    polygons.forEach(p => { if(p.getMap()) p.setOptions({ fillOpacity: 0.1 }); });
+    setTimeout(() => { polygons.forEach(p => { if(p.getMap()) p.setOptions({ fillOpacity: 0.3 }); }); }, 3000);
+}
+
+// ============================================================
+// 11. GOOGLE EARTH INTEGRATION
+// ============================================================
+function openGoogleEarth(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !order.coords || order.coords.length < 3) { alert('لا توجد إحداثيات كافية'); return; }
+    const kml = generateKML([order]); openEarthWithKML(kml, `طلب ${orderId}`);
+}
+function openGoogleEarthAll() {
+    if (!orders || orders.length === 0) { alert('لا توجد طلبات'); return; }
+    const valid = orders.filter(o => o.coords && o.coords.length >= 3);
+    if (!valid.length) { alert('لا توجد طلبات بإحداثيات كافية'); return; }
+    const kml = generateKML(valid); openEarthWithKML(kml, 'جميع الطلبات');
+}
+function generateKML(ordersList) {
+    let kml = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>الرفع المساحي</name><Style id="polyGreen"><PolyStyle><color>7F00FF00</color><outline>1</outline></PolyStyle><LineStyle><color>FF00FF00</color><width>3</width></LineStyle></Style><Style id="polyOrange"><PolyStyle><color>7F00A5FF</color><outline>1</outline></PolyStyle><LineStyle><color>FF00A5FF</color><width>3</width></LineStyle></Style><Style id="polyRed"><PolyStyle><color>7F0000FF</color><outline>1</outline></PolyStyle><LineStyle><color>FF0000FF</color><width>3</width></LineStyle></Style>`;
+    ordersList.forEach(order => {
+        const style = order.remaining <= 0 ? 'polyGreen' : (order.remaining < order.due * 0.5 ? 'polyOrange' : 'polyRed');
+        kml += `<Placemark><name>طلب ${order.id} - ${order.owner}</name><description>المالك: ${order.owner}\nالمركز: ${order.center}\nالنوع: ${order.typeName}\nالمساحة: ${order.area} م²\nالمدفوع: ${order.paid} ج.م\nالمستحق: ${order.due} ج.م\nالمتبقي: ${order.remaining} ج.م\nالحد الشمالي: ${order.northernBorder}\nالحد الجنوبي: ${order.southernBorder}\nالحد الشرقي: ${order.easternBorder}\nالحد الغربي: ${order.westernBorder}</description><styleUrl>#${style}</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>`;
+        order.coords.forEach(c => { kml += `${c.lng},${c.lat},0 `; });
+        if(order.coords.length) kml += `${order.coords[0].lng},${order.coords[0].lat},0`;
+        kml += `</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
+    });
+    kml += `</Document></kml>`;
+    return kml;
+}
+function openEarthWithKML(kml, title) {
+    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+    const url = URL.createObjectURL(blob);
+    try { window.open(`googleearth://${url}`, '_blank'); } catch(e) { console.log('Google Earth Pro غير مثبت'); }
+    const link = document.createElement('a'); link.href = url; link.download = `${title}.kml`; link.click();
+    showEarthInModal(kml);
+}
+function showEarthInModal(kml) {
+    const container = document.getElementById('earthContainer');
+    container.innerHTML = `<div style="padding:20px;text-align:center;height:100%;"><p>✅ تم إنشاء ملف KML</p><p style="color:#666;font-size:14px;">سيتم فتح Google Earth Pro تلقائياً</p><br><button class="btn btn-earth" onclick="downloadKML()">📥 تحميل</button><button class="btn btn-primary" onclick="openEarthWeb()">🌍 فتح Web</button><br><br><div style="text-align:left;background:#f5f5f5;padding:10px;border-radius:8px;max-height:300px;overflow:auto;font-size:11px;direction:ltr;"><pre>${kml.substring(0,800)}...</pre></div></div>`;
+    document.getElementById('earthModal').style.display = 'flex';
+    window._currentKML = kml;
+}
+function downloadKML() { if (!window._currentKML) return; const blob = new Blob([window._currentKML], { type: 'application/vnd.google-earth.kml+xml' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'الرفع_المساحي.kml'; link.click(); }
+function openEarthWeb() { window.open('https://earth.google.com/web/', '_blank'); }
+function closeEarthModal() { document.getElementById('earthModal').style.display = 'none'; }
+
+// ============================================================
+// 12. EXTRACT SATELLITE IMAGES (مع idle)
+// ============================================================
+function captureSingleSatellite(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) { alert('⚠️ الطلب غير موجود'); return; }
+    if (!order.coords || order.coords.length < 3) { alert('⚠️ لا توجد إحداثيات كافية'); return; }
+    selectImageDestination(function(result) {
+        if (result && result.cancelled) {
+            alert('⛔ تم إلغاء العملية');
+            return;
+        }
+        startSingleImageCapture(order, result || null);
+    });
+}
+function startSingleImageCapture(order, folderHandle) {
+    isExtracting = true; shouldCancel = false; extractedImagesData = [];
+    startExtractionFocusGuard();
+    document.getElementById('progressModal').style.display = 'flex';
+    document.getElementById('progressFill').style.width = '50%';
+    document.getElementById('progressStatus').textContent = `جاري التقاط صورة الطلب ${order.id}...`;
+    document.getElementById('progressDetails').textContent = 'جاري التحميل...';
+    captureSatelliteImageWithHandle(order, folderHandle, function(success, imageData) {
+        isExtracting = false;
+        stopExtractionFocusGuard();
+        if (success) {
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('progressStatus').textContent = '✅ تم الالتقاط';
+            setTimeout(() => {
+                document.getElementById('progressModal').style.display = 'none';
+                alert(`✅ تم التقاط صورة الطلب ${order.id}`);
+                if (imageData) { const win = window.open('', '_blank'); if (win) { win.document.write(`<img src="${imageData}" style="max-width:100%;max-height:100vh;display:block;margin:auto;" />`); win.document.title = `صورة ${order.id}`; } }
+            }, 500);
+        } else { document.getElementById('progressModal').style.display = 'none'; alert('❌ حدث خطأ'); }
+    });
+}
+function extractSatelliteImages() {
+    const selectedCenter = document.getElementById('filterCenter').value;
+    const targetOrders = selectedCenter === 'all' ? orders : orders.filter(o => o.center === selectedCenter);
+    const validOrders = targetOrders.filter(o => o.coords && o.coords.length >= 3);
+    if (!validOrders.length) { alert('لا توجد طلبات صالحة'); return; }
+    selectImageDestination(function(result) {
+        if (result && result.cancelled) {
+            alert('⛔ تم إلغاء العملية');
+            return;
+        }
+        startImageExtraction(validOrders, result || null);
+    });
+}
+function startImageExtraction(validOrders, folderHandle) {
+    isExtracting = true; shouldCancel = false; extractedImagesData = [];
+    startExtractionFocusGuard();
+    document.getElementById('progressModal').style.display = 'flex';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressStatus').textContent = `جاري التقاط صور ${validOrders.length} طلب...`;
+    document.getElementById('progressDetails').textContent = 'جاري التحميل...';
+    let completed = 0, total = validOrders.length, failed = 0, isProcessing = false;
+    function processNext(index) {
+        if (shouldCancel) {
+            isExtracting = false;
+            stopExtractionFocusGuard();
+            document.getElementById('progressModal').style.display = 'none';
+            alert(`⏹️ تم الإلغاء. تم التقاط ${completed} صورة`);
+            if (extractedImagesData.length) exportImagesExcel(extractedImagesData, folderHandle);
+            return;
+        }
+        if (index >= validOrders.length) {
+            isExtracting = false;
+            stopExtractionFocusGuard();
+            document.getElementById('progressModal').style.display = 'none';
+            if (failed) alert(`⚠️ تم التقاط ${completed} صورة، فشل ${failed}`);
+            else alert(`✅ تم التقاط ${total} صورة`);
+            if (extractedImagesData.length) exportImagesExcel(extractedImagesData, folderHandle);
+            return;
+        }
+        if (isProcessing) return;
+        isProcessing = true;
+        const order = validOrders[index];
+        document.getElementById('progressDetails').textContent = `جاري معالجة: ${order.id} - ${order.owner}`;
+        captureSatelliteImageWithHandle(order, folderHandle, function(success, imageData) {
+            if (success) { completed++; if (imageData) extractedImagesData.push({ id: order.id, imageData, fileName: `${order.id}.jpg` }); } else failed++;
+            const progress = ((completed + failed) / total) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressStatus').textContent = `تم التقاط ${completed} من ${total}`;
+            isProcessing = false;
+            setTimeout(() => processNext(index + 1), 300);
+        });
+    }
+    processNext(0);
+}
+
+// ============================================================
+// دالة حفظ Blob في ملف أو تنزيله
+// ============================================================
+async function saveBlobToFile(fileName, blob, folderHandle) {
+    if (folderHandle) {
+        try {
+            const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return;
+        } catch (err) {
+            console.warn('⚠️ فشل حفظ الملف في المجلد، سيتم تنزيله بدلاً من ذلك', err);
+        }
+    }
+    saveAs(blob, fileName);
+}
+
+function blobToDataURL(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+function normalizeCoords(coords) {
+    const unique = [];
+    const seen = new Set();
+    coords.forEach(p => {
+        if (!p || p.lat === undefined || p.lng === undefined) return;
+        const key = `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(p);
+        }
+    });
+    return unique;
+}
+
+function simplifyCoords(coords, maxPoints = 40) {
+    if (!coords || coords.length <= maxPoints) return coords;
+    const step = Math.ceil(coords.length / maxPoints);
+    const result = [];
+    for (let i = 0; i < coords.length; i += step) {
+        result.push(coords[i]);
+    }
+    if (result[result.length - 1] !== coords[coords.length - 1]) {
+        result.push(coords[coords.length - 1]);
+    }
+    return result;
+}
+
+function encodeSignedNumber(num) {
+    let sgn = num << 1;
+    if (num < 0) sgn = ~sgn;
+    let encoded = '';
+    while (sgn >= 0x20) {
+        encoded += String.fromCharCode((0x20 | (sgn & 0x1f)) + 63);
+        sgn >>= 5;
+    }
+    encoded += String.fromCharCode(sgn + 63);
+    return encoded;
+}
+
+function encodePolyline(coords) {
+    let lastLat = 0;
+    let lastLng = 0;
+    let result = '';
+    coords.forEach(point => {
+        const lat = Math.round(point.lat * 1e5);
+        const lng = Math.round(point.lng * 1e5);
+        result += encodeSignedNumber(lat - lastLat);
+        result += encodeSignedNumber(lng - lastLng);
+        lastLat = lat;
+        lastLng = lng;
+    });
+    return result;
+}
+
+function waitForGoogleMapsTiles(mapInstance) {
+    return new Promise(resolve => {
+        let resolved = false;
+        const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            setTimeout(resolve, 500);
+        };
+        if (!mapInstance || !google || !google.maps) return resolve();
+        google.maps.event.addListenerOnce(mapInstance, 'tilesloaded', finish);
+        google.maps.event.addListenerOnce(mapInstance, 'idle', finish);
+        setTimeout(finish, 5000);
+    });
+}
+
+function waitForMapReady(mapInstance) {
+    return new Promise(resolve => {
+        let resolved = false;
+        const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            setTimeout(resolve, 500);
+        };
+        if (!mapInstance || !google || !google.maps) return resolve();
+        google.maps.event.addListenerOnce(mapInstance, 'idle', finish);
+        google.maps.event.addListenerOnce(mapInstance, 'tilesloaded', finish);
+        setTimeout(finish, 5000);
+    });
+}
+
+// ============================================================
+// دالة التقاط الصورة باستخدام Static Maps API (موثوقة)
+// ============================================================
+function captureSatelliteImageWithHandle(order, folderHandle, callback) {
+    if (!order.coords || order.coords.length < 3) {
+        callback(false, null);
+        return;
+    }
+
+    const normalizedCoords = normalizeCoords(order.coords);
+    if (normalizedCoords.length < 3) {
+        callback(false, null);
+        return;
+    }
+
+    const simplifiedCoords = simplifyCoords(normalizedCoords, 30);
+    const bounds = new google.maps.LatLngBounds();
+    simplifiedCoords.forEach(c => bounds.extend(new google.maps.LatLng(c.lat, c.lng)));
+    const center = bounds.getCenter();
+    const zoom = calculateOptimalZoom(bounds);
+    const width = 640;
+    const height = 640;
+
+    const pathItems = ['fillcolor:0x4285F430', 'color:0x4285F4', 'weight:4'];
+    simplifiedCoords.forEach(c => pathItems.push(`${c.lat},${c.lng}`));
+    pathItems.push(`${simplifiedCoords[0].lat},${simplifiedCoords[0].lng}`);
+    const pathParam = encodeURIComponent(pathItems.join('|'));
+
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
+        `center=${center.lat()},${center.lng()}` +
+        `&zoom=${zoom}` +
+        `&size=${width}x${height}` +
+        `&scale=2` +
+        `&maptype=satellite` +
+        `&path=${pathParam}` +
+        `&markers=color:0xff0000%7C${center.lat()},${center.lng()}` +
+        `&key=${currentApiKey}` +
+        `&format=jpg` +
+        `&timestamp=${Date.now()}`;
+
+    fetch(staticMapUrl, { cache: 'no-store', mode: 'cors' })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(async function(blob) {
+            try {
+                const fileName = `${order.id}.jpg`;
+                const base64data = await blobToDataURL(blob);
+                await saveBlobToFile(fileName, blob, folderHandle);
+                callback(true, base64data);
+            } catch (err) {
+                console.error('❌ خطأ في حفظ الصورة:', err);
+                callback(true, null);
+            }
+        })
+        .catch(err => {
+            console.error('❌ فشل Static Maps API للطلب:', order.id, err);
+            captureHtml2Canvas(order, folderHandle, callback);
+        });
+}
+
+// ============================================================
+// دالة التقاط الصورة باستخدام html2canvas بعد تحميل البلاط
+// ============================================================
+function captureHtml2Canvas(order, folderHandle, callback) {
+    if (!mapInitialized || !map) {
+        callback(false, null);
+        return;
+    }
+
+    const previousPolygons = polygons.slice();
+    previousPolygons.forEach(p => p.setMap(null));
+
+    const path = order.coords.map(c => new google.maps.LatLng(c.lat, c.lng));
+    const tempPolygon = new google.maps.Polygon({
+        paths: path,
+        strokeColor: '#4285F4',
+        strokeOpacity: 0.9,
+        strokeWeight: 4,
+        fillColor: '#4285F4',
+        fillOpacity: 0.3
+    });
+    tempPolygon.setMap(map);
+
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    map.fitBounds(bounds);
+    const center = bounds.getCenter();
+    map.setCenter(center);
+    map.setZoom(calculateOptimalZoom(bounds));
+
+    waitForMapReady(map).then(() => {
+        setTimeout(() => {
+            const mapElement = document.getElementById('map');
+            if (!mapElement) {
+                previousPolygons.forEach(p => p.setMap(map));
+                tempPolygon.setMap(null);
+                callback(false, null);
+                return;
+            }
+
+            html2canvas(mapElement, {
+                useCORS: true,
+                scale: 2,
+                backgroundColor: '#ffffff',
+                allowTaint: true,
+                logging: false,
+                imageTimeout: 5000
+            }).then(canvas => {
+                const croppedCanvas = cropCanvasToContent(canvas);
+                croppedCanvas.toBlob(async function(blob) {
+                    try {
+                        const fileName = `${order.id}.jpg`;
+                        const base64data = croppedCanvas.toDataURL('image/jpeg', 0.92);
+                        await saveBlobToFile(fileName, blob, folderHandle);
+                        previousPolygons.forEach(p => p.setMap(map));
+                        tempPolygon.setMap(null);
+                        callback(true, base64data);
+                    } catch (err) {
+                        console.error('❌ خطأ في حفظ الصورة html2canvas:', err);
+                        previousPolygons.forEach(p => p.setMap(map));
+                        tempPolygon.setMap(null);
+                        callback(false, null);
+                    }
+                }, 'image/jpeg', 0.92);
+            }).catch(err => {
+                console.error('❌ خطأ في html2canvas:', err);
+                previousPolygons.forEach(p => p.setMap(map));
+                tempPolygon.setMap(null);
+                callback(false, null);
+            });
+        }, 800);
+    }).catch(() => {
+        previousPolygons.forEach(p => p.setMap(map));
+        tempPolygon.setMap(null);
+        callback(false, null);
+    });
+}
+
+function calculateOptimalZoom(bounds) {
+    try {
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const latDiff = ne.lat() - sw.lat();
+        const lngDiff = ne.lng() - sw.lng();
+        const maxDiff = Math.max(latDiff, lngDiff);
+
+        if (maxDiff > 10) return 6;
+        if (maxDiff > 5) return 8;
+        if (maxDiff > 2) return 10;
+        if (maxDiff > 1) return 12;
+        if (maxDiff > 0.5) return 14;
+        if (maxDiff > 0.2) return 16;
+        if (maxDiff > 0.05) return 18;
+        return 20;
+    } catch (e) {
+        return 18;
+    }
+}
+
+function cropCanvasToContent(canvas) {
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    let top = canvas.height, bottom = 0, left = canvas.width, right = 0, hasContent = false;
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            const index = (y * canvas.width + x) * 4;
+            const r = data[index], g = data[index+1], b = data[index+2], a = data[index+3];
+            if (a > 0 && !(r > 240 && g > 240 && b > 240)) {
+                hasContent = true;
+                if (x < left) left = x;
+                if (x > right) right = x;
+                if (y < top) top = y;
+                if (y > bottom) bottom = y;
+            }
+        }
+    }
+    if (!hasContent || right - left < 10 || bottom - top < 10) return canvas;
+    const margin = 15;
+    left = Math.max(0, left - margin); top = Math.max(0, top - margin);
+    right = Math.min(canvas.width, right + margin); bottom = Math.min(canvas.height, bottom + margin);
+    const cropWidth = right - left, cropHeight = bottom - top;
+    const croppedCanvas = document.createElement('canvas');
+    croppedCanvas.width = cropWidth; croppedCanvas.height = cropHeight;
+    const croppedCtx = croppedCanvas.getContext('2d');
+    croppedCtx.drawImage(canvas, left, top, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+    return croppedCanvas;
+}
+
+function fallbackStaticMap(order, folderHandle, callback) {
+    try {
+        const bounds = new google.maps.LatLngBounds();
+        order.coords.forEach(c => bounds.extend(new google.maps.LatLng(c.lat, c.lng)));
+        const center = bounds.getCenter();
+        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat()},${center.lng()}&zoom=18&size=600x400&maptype=satellite&key=${currentApiKey}&format=jpg`;
+        fetch(staticMapUrl).then(response => response.blob()).then(async function(blob) {
+            try {
+                const fileName = `${order.id}.jpg`;
+                if (folderHandle) {
+                    try { const fileHandle = await folderHandle.getFileHandle(fileName, { create: true }); const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close(); } catch(err) { saveAs(blob, fileName); }
+                } else { saveAs(blob, fileName); }
+                const reader = new FileReader();
+                reader.onloadend = function() { callback(true, reader.result); };
+                reader.readAsDataURL(blob);
+            } catch(err) { saveAs(blob, `${order.id}.jpg`); callback(true, null); }
+        }).catch(() => callback(false, null));
+    } catch(e) { callback(false, null); }
+}
+
+function exportImagesExcel(imagesData, folderHandle) {
+    if (!imagesData || !imagesData.length) return;
+    const data = imagesData.map(img => ({ RequestNumber: img.id, AerialImage: img.fileName }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, 'الصور');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/octet-stream' });
+    const fileName = `الصور_الفضائية_${imagesData.length}_طلب.xlsx`;
+    if (folderHandle) {
+        folderHandle.getFileHandle(fileName, { create: true }).then(fh => fh.createWritable()).then(w => { w.write(blob); w.close(); }).catch(() => saveAs(blob, fileName));
+    } else { saveAs(blob, fileName); }
+}
+function cancelExtraction() {
+    if (isExtracting) { shouldCancel = true; document.getElementById('progressStatus').textContent = '⏹️ جاري الإلغاء...'; document.getElementById('progressDetails').textContent = 'سيتم الإيقاف بعد الصورة الحالية'; ensureExtractionWindowActive(); }
+}
+
+// ============================================================
+// 13. EXPORT EXCEL
+// ============================================================
+function getCurrentVisibleExportData() {
+    if (currentActiveTab === 'differences') {
+        const rows = (orders || []).filter(o => o.remaining > 0).map(o => ({
+            'رقم الطلب': o.id,
+            'المالك': o.owner,
+            'المركز': o.center,
+            'النوع': o.typeName,
+            'المساحة': o.area.toFixed(2),
+            'المدفوع': o.paid.toFixed(2),
+            'المستحق': o.due.toFixed(2),
+            'المتبقي': o.remaining.toFixed(2),
+            'الحالة': o.status
+        }));
+        return { rows, sheetName: 'الفروق' };
+    }
+
+    if (currentActiveTab === 'centers') {
+        const centersData = {};
+        (orders || []).forEach(o => {
+            const name = o.center || 'غير محدد';
+            if (!centersData[name]) centersData[name] = { count: 0, totalArea: 0, totalPaid: 0, totalDue: 0, totalRemaining: 0 };
+            centersData[name].count++;
+            centersData[name].totalArea += o.area;
+            centersData[name].totalPaid += o.paid;
+            centersData[name].totalDue += o.due;
+            centersData[name].totalRemaining += o.remaining;
+        });
+        const rows = Object.entries(centersData).map(([center, data]) => ({
+            'المركز': center,
+            'عدد الطلبات': data.count,
+            'إجمالي المساحة': data.totalArea.toFixed(2),
+            'إجمالي المدفوع': data.totalPaid.toFixed(2),
+            'إجمالي المستحق': data.totalDue.toFixed(2),
+            'إجمالي المتبقي': data.totalRemaining.toFixed(2)
+        }));
+        return { rows, sheetName: 'المراكز' };
+    }
+
+    const rows = ((currentTableOrders && currentTableOrders.length ? currentTableOrders : orders) || []).map(o => ({
+        'رقم الطلب': o.id,
+        'المالك': o.owner,
+        'المركز': o.center,
+        'التاريخ': o.date,
+        'النوع': o.typeName,
+        'المساحة': formatNumberValue(o.area, ''),
+        'المدفوع': formatNumberValue(o.paid, ''),
+        'المستحق': formatNumberValue(o.due, ''),
+        'المتبقي': formatNumberValue(o.remaining, ''),
+        'الحالة': o.status || 'بيانات ناقصة',
+        'الحد الشمالي': o.northernBorder,
+        'الحد الجنوبي': o.southernBorder,
+        'الحد الشرقي': o.easternBorder,
+        'الحد الغربي': o.westernBorder
+    }));
+    return { rows, sheetName: 'الطلبات' };
+}
+
+function exportExcel() {
+    const exportData = getCurrentVisibleExportData();
+    if (!exportData.rows.length) { alert('لا توجد بيانات'); return; }
+    generateAndSaveExcel(null, exportData);
+}
+function getExportFileLabel(exportData) {
+    const tab = currentActiveTab || 'orders';
+    const highlight = document.getElementById('highlightFilter')?.value || 'all';
+    const center = document.getElementById('filterCenter')?.value || 'all';
+    const search = document.getElementById('searchInput')?.value?.trim() || '';
+    const base = (exportData?.sheetName || 'البيانات').toString().trim();
+
+    if (tab === 'differences') return 'الفروق';
+    if (tab === 'centers') return 'المراكز';
+
+    const parts = [];
+    parts.push(base && base !== 'الطلبات' ? base : 'الطلبات');
+
+    if (highlight === 'fee-diff') parts.push('فرق_رسوم');
+    else if (highlight === 'area-diff') parts.push('فرق_مساحة');
+    else if (highlight === 'tier-change') parts.push('انتقال_شريحة');
+    else if (highlight === 'none') parts.push('عادي');
+
+    if (center && center !== 'all') parts.push(center.replace(/\s+/g, '_'));
+    if (search) parts.push(search.replace(/\s+/g, '_'));
+
+    const label = parts.join('_').replace(/[^\u0600-\u06FFA-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+    return label || 'الطلبات';
+}
+function generateAndSaveExcel(folderHandle, exportData) {
+    const { rows, sheetName } = exportData || { rows: [], sheetName: 'البيانات' };
+    if (!rows.length) { alert('لا توجد بيانات'); return; }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName || 'البيانات');
+
+    const headerRange = XLSX.utils.decode_range(ws['!ref']);
+    headerRange.s.r = 0;
+    headerRange.e.r = 0;
+    const headerCells = XLSX.utils.encode_range(headerRange);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: Object.keys(rows[0]).length - 1 } }];
+
+    const titleCell = ws['A1'];
+    if (!titleCell) ws['A1'] = { t: 's', v: sheetName };
+    else titleCell.v = sheetName;
+
+    const firstRow = [];
+    Object.keys(rows[0]).forEach((key, index) => {
+        const cellRef = XLSX.utils.encode_cell({ r: 1, c: index });
+        ws[cellRef] = { t: 's', v: key };
+        firstRow.push(cellRef);
+    });
+
+    const columnWidths = Object.keys(rows[0]).map(key => ({ wch: Math.max(12, key.length + 2) }));
+    ws['!cols'] = columnWidths;
+
+    const numberColumns = ['المساحة', 'المدفوع', 'المستحق', 'المتبقي', 'إجمالي المساحة', 'إجمالي المدفوع', 'إجمالي المستحق', 'إجمالي المتبقي'];
+    const dateColumns = ['التاريخ'];
+
+    rows.forEach((row, rowIndex) => {
+        Object.entries(row).forEach(([key, value], colIndex) => {
+            const cellRef = XLSX.utils.encode_cell({ r: rowIndex + 2, c: colIndex });
+            const isNumber = numberColumns.includes(key);
+            const isDate = dateColumns.includes(key) && value;
+            if (isNumber) {
+                const numValue = typeof value === 'number' ? value : parseFloat(String(value).replace(/,/g, ''));
+                ws[cellRef] = { t: 'n', v: isNaN(numValue) ? 0 : numValue };
+            } else if (isDate) {
+                const dateValue = new Date(value);
+                ws[cellRef] = { t: 'd', v: isNaN(dateValue.getTime()) ? '' : dateValue };
+            } else {
+                ws[cellRef] = { t: 's', v: String(value ?? '') };
+            }
+        });
+    });
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    const style = {
+        font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 12 },
+        fill: { fgColor: { rgb: 'FF1A3A5C' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: { top: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, bottom: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, left: { style: 'thin', color: { rgb: 'FFD9E2EC' } }, right: { style: 'thin', color: { rgb: 'FFD9E2EC' } } }
+    };
+
+    const dataStyle = {
+        font: { sz: 11, color: { rgb: 'FF22354A' } },
+        alignment: { vertical: 'center' },
+        border: { top: { style: 'thin', color: { rgb: 'FFE8EEF5' } }, bottom: { style: 'thin', color: { rgb: 'FFE8EEF5' } }, left: { style: 'thin', color: { rgb: 'FFE8EEF5' } }, right: { style: 'thin', color: { rgb: 'FFE8EEF5' } } }
+    };
+
+    Object.keys(rows[0]).forEach((_, colIndex) => {
+        const headerCellRef = XLSX.utils.encode_cell({ r: 1, c: colIndex });
+        ws[headerCellRef] = { ...ws[headerCellRef], s: style };
+    });
+
+    for (let r = 2; r <= range.e.r; r++) {
+        for (let c = 0; c <= range.e.c; c++) {
+            const cellRef = XLSX.utils.encode_cell({ r, c });
+            if (ws[cellRef]) ws[cellRef].s = dataStyle;
+        }
+    }
+
+    ws['!rows'] = [{ hpt: 20 }, { hpt: 18 }];
+
+    const filterLabel = getExportFileLabel(exportData);
+    const fileName = `تقرير_${filterLabel}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/octet-stream' });
+
+    function downloadBlob() {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function saveWithPicker() {
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                alert('✅ تم التصدير');
+                return;
+            } catch (err) {
+                if (err && err.name === 'AbortError') {
+                    alert('⛔ تم إلغاء التصدير');
+                    return;
+                }
+                console.warn('Save picker failed:', err);
+            }
+        }
+        downloadBlob();
+        alert('✅ تم التصدير');
+    }
+
+    saveWithPicker();
+}
+
+// ============================================================
+// 14. SAVE HANDLERS
+// ============================================================
+function selectImageDestination(callback) {
+    if (typeof callback !== 'function') return;
+    if (window.showDirectoryPicker) {
+        window.showDirectoryPicker()
+            .then(dir => callback(dir))
+            .catch(err => {
+                if (err && err.name === 'AbortError') callback({ cancelled: true });
+                else callback(null);
+            });
+    } else {
+        callback(null);
+    }
+}
+function showSaveModal(title, desc, callback) {
+    if (typeof callback !== 'function') return;
+    if (title && title.includes('إكسل')) {
+        generateAndSaveExcel(null, getCurrentVisibleExportData());
+    } else {
+        selectImageDestination(callback);
+    }
+}
+function closeSaveModal() { saveCallback = null; }
+function selectFolder() { selectImageDestination(saveCallback); }
+function confirmSave() { if (typeof saveCallback === 'function') saveCallback(null); closeSaveModal(); }
+function closeProgressModal() { if (isExtracting) { if (!confirm('⚠️ العملية لا تزال قيد التنفيذ. إلغاء؟')) return; shouldCancel = true; stopExtractionFocusGuard(); } document.getElementById('progressModal').style.display = 'none'; }
+
+// ============================================================
+// 15. CONFIG MANAGEMENT
+// ============================================================
+function openConfig() {
+    const container = document.getElementById('configTableContainer');
+    let html = '';
+    ['صلاحية موقع مدينة', 'صلاحية موقع قرية', 'نشاط'].forEach(typeId => {
+        const label = typeId === 'صلاحية موقع مدينة' ? '📍 موقع - مدينة (1)' :
+                      typeId === 'صلاحية موقع قرية' ? '📍 موقع - قرية (2)' : '🏪 نشاط (3)';
+        html += `<div class="config-section"><h4>${label}</h4><table class="config-table"><tr><th>من</th><th>إلى</th><th>القيمة الثابتة (ج.م)</th></tr>`;
+        config[typeId].forEach((tier, i) => {
+            html += `<tr><td><input type="number" value="${tier.min}" data-type="${typeId}" data-index="${i}" data-field="min"></td>
+                     <td><input type="number" value="${tier.max === Infinity ? '' : tier.max}" data-type="${typeId}" data-index="${i}" data-field="max"></td>
+                     <td><input type="number" value="${tier.price}" data-type="${typeId}" data-index="${i}" data-field="price"></td></tr>`;
+        });
+        html += `</table></div>`;
+    });
+    container.innerHTML = html;
+    document.getElementById('configModal').style.display = 'flex';
+}
+function closeConfig() { document.getElementById('configModal').style.display = 'none'; }
+function saveConfig() {
+    const inputs = document.querySelectorAll('#configTableContainer input');
+    inputs.forEach(inp => {
+        const typeId = inp.dataset.type, idx = parseInt(inp.dataset.index), field = inp.dataset.field;
+        const val = inp.value;
+        if (field === 'max' && val === '') config[typeId][idx][field] = Infinity;
+        else config[typeId][idx][field] = parseFloat(val) || 0;
+    });
+    recalculateAll(); saveToLocalStorage(); renderAll(); closeConfig(); alert('✅ تم حفظ الإعدادات');
+}
+function resetConfig() { config = JSON.parse(JSON.stringify(defaultConfig)); saveConfig(); }
+
+// ============================================================
+// 16. LOCAL STORAGE
+// ============================================================
+function saveToLocalStorage() {
+    try { localStorage.setItem('ordersData', JSON.stringify(orders)); localStorage.setItem('configData', JSON.stringify(config)); } catch(e) {}
+}
+function loadFromLocalStorage() {
+    try {
+        const configData = localStorage.getItem('configData');
+        const savedApiKey = localStorage.getItem('googleMapsApiKey');
+        if (savedApiKey) { currentApiKey = savedApiKey; }
+        if (configData) { const parsed = JSON.parse(configData); if (parsed && Object.keys(parsed).length) config = parsed; }
+        orders = []; allCenters = [];
+    } catch(e) { console.warn('⚠️ تعذر التحميل', e); }
+}
+
+// ============================================================
+// 17. UTILITY FUNCTIONS
+// ============================================================
+function updateStats() {
+    document.getElementById('totalOrders').textContent = orders ? orders.length : 0;
+    const totalDiff = orders ? orders.reduce((sum,o) => sum + (o.remaining > 0 ? o.remaining : 0), 0) : 0;
+    document.getElementById('totalDiff').textContent = totalDiff.toFixed(2);
+    const totalArea = orders ? orders.reduce((s,o) => s + o.area, 0) : 0;
+    document.getElementById('totalArea').textContent = totalArea.toFixed(2);
+    document.getElementById('totalCenters').textContent = allCenters ? allCenters.length : 0;
+}
+function applyFilters() {
+    if (!orders || orders.length === 0) { document.getElementById('ordersBody').innerHTML = `<tr><td colspan="12" style="text-align:center;color:#999;">لا توجد بيانات</td></tr>`; return; }
+    const center = document.getElementById('filterCenter').value;
+    const type = document.getElementById('filterType').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const highlightFilter = document.getElementById('highlightFilter').value;
+    const filtered = orders.filter(o => {
+        const matchCenter = center === 'all' || o.center === center;
+        const matchType = type === 'all' || o.typeCategory === type;
+        const matchSearch = o.id.includes(search) || o.owner.includes(search);
+        const highlightType = getOrderHighlightType(o);
+        const matchHighlight = highlightFilter === 'all' || highlightType === highlightFilter;
+        return matchCenter && matchType && matchSearch && matchHighlight;
+    });
+    const tbody = document.getElementById('ordersBody');
+    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#999;">لا توجد نتائج</td></tr>`; return; }
+    renderOrdersTable(filtered);
+}
+function clearSearch() { document.getElementById('searchInput').value = ''; document.getElementById('filterCenter').value = 'all'; document.getElementById('filterType').value = 'all'; document.getElementById('highlightFilter').value = 'all'; applyFilters(); }
+function clearMap() { if(polygons) { polygons.forEach(p => p.setMap(null)); polygons = []; } }
+function toggleMapType() { if (!mapInitialized || !map) return; mapType = mapType === 'satellite' ? 'roadmap' : 'satellite'; map.setMapTypeId(mapType); }
+function clearAll() {
+    if (!confirm('مسح جميع البيانات؟')) return;
+    orders = []; allCenters = []; localStorage.removeItem('ordersData');
+    renderAll(); clearMap(); updateStats();
+    document.getElementById('ordersBody').innerHTML = `<tr><td colspan="12" style="text-align:center;color:#999;">تم مسح البيانات</td></tr>`;
+}
+function showDetail(orderId) {
+    if (!orders) return;
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    const content = document.getElementById('detailContent');
+    content.innerHTML = `<div style="direction:rtl;font-size:14px;">
+        <p><strong>رقم الطلب:</strong> ${order.id}</p><p><strong>المالك:</strong> ${order.owner}</p><p><strong>المركز:</strong> ${order.center}</p>
+        <p><strong>التاريخ:</strong> ${order.date}</p><p><strong>النوع:</strong> ${order.typeName}</p>
+        <p><strong>المساحة:</strong> ${order.area.toFixed(2)} م²</p><p><strong>المدفوع:</strong> ${order.paid.toFixed(2)} ج.م</p>
+        <p><strong>المستحق:</strong> ${order.due.toFixed(2)} ج.م</p><p><strong>المتبقي:</strong> <span style="color:${order.remaining>0?'#f44336':'#4CAF50'}">${order.remaining.toFixed(2)} ج.م</span></p>
+        <hr><p><strong>الحد الشمالي:</strong> ${order.northernBorder || 'غير محدد'}</p>
+        <p><strong>الحد الجنوبي:</strong> ${order.southernBorder || 'غير محدد'}</p>
+        <p><strong>الحد الشرقي:</strong> ${order.easternBorder || 'غير محدد'}</p>
+        <p><strong>الحد الغربي:</strong> ${order.westernBorder || 'غير محدد'}</p>
+        <hr><button class="btn btn-earth" onclick="zoomToOrder('${order.id}')">📍 تكبير</button>
+        <button class="btn btn-earth" onclick="openGoogleEarth('${order.id}')">🌍 فتح في Google Earth</button>
+        <button class="btn btn-satellite" onclick="captureSingleSatellite('${order.id}')">🛰️ حفظ صورة</button>
+    </div>`;
+    document.getElementById('detailModal').style.display = 'flex';
+}
+function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
+function switchTab(tab) {
+    currentActiveTab = tab;
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(el => {
+        if (el.textContent.includes(tab === 'orders' ? 'الطلبات' : tab === 'differences' ? 'فروق' : 'المراكز')) el.classList.add('active');
+    });
+    if (tab === 'centers') renderCentersTable();
+}
+
+// ============================================================
+// 18. INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 بدء التطبيق');
+    window.addEventListener('blur', function() {
+        if (isExtracting) {
+            setTimeout(ensureExtractionWindowActive, 50);
+        }
+    });
+    loadFromLocalStorage();
+    orders = []; allCenters = [];
+    renderAll(); updateStats();
+    document.getElementById('dataStatus').textContent = '✅ جاهز لاستقبال البيانات';
+    document.getElementById('dataStatus').style.color = 'green';
+    if (currentApiKey && currentApiKey !== '') {
+        updateApiKey(currentApiKey, function(success) {
+            if (success) {
+                document.getElementById('apiStatus').className = 'api-status success';
+                document.getElementById('apiStatus').textContent = '✅ تم التحديث';
+                document.getElementById('fileNameDisplay').textContent = '✅ تم تحميل المفتاح من التخزين';
+            }
+        });
+    }
+});
+window.addEventListener('beforeunload', function(e) {
+    if (orders && orders.length > 0) { e.preventDefault(); e.returnValue = '⚠️ توجد بيانات غير محفوظة. هل أنت متأكد من المغادرة؟'; return e.returnValue; }
+});
+window.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        needsMapRefresh = true;
+    } else if (needsMapRefresh && mapInitialized && map) {
+        google.maps.event.trigger(map, 'resize');
+        if (orders && orders.length > 0) renderMap();
+        needsMapRefresh = false;
+    }
+});
+window.initMap = initMap;
+window.onclick = function(event) {
+    if (!event.target.classList.contains('modal')) return;
+    if (isExtracting && event.target.id === 'progressModal') {
+        ensureExtractionWindowActive();
+        return;
+    }
+    event.target.style.display = 'none';
+};
+</script>
+</body>
+</html>
