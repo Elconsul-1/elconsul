@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تقنين المراكز - المنيا | نسخة محسنة</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Tajawal', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0d2b1f 0%, #1a4d2e 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .main-card {
+            background: rgba(255,255,255,0.98);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0a2a1a 0%, #1b5e3a 100%);
+            padding: 30px 35px;
+            color: white;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header h1::before { content: "📊"; font-size: 2rem; }
+        .header p { opacity: 0.9; margin-top: 8px; font-size: 0.95rem; }
+        .content { padding: 30px 35px; }
+        .mode-switch {
+            display: flex;
+            gap: 15px;
+            background: #f1f5f9;
+            padding: 8px;
+            border-radius: 60px;
+            margin-bottom: 30px;
+        }
+        .mode-btn {
+            flex: 1;
+            text-align: center;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #475569;
+        }
+        .mode-btn.active {
+            background: #1b5e3a;
+            color: white;
+            box-shadow: 0 4px 12px rgba(27,94,58,0.3);
+        }
+        .input-group { margin-bottom: 25px; }
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e293b;
+            font-size: 0.9rem;
+        }
+        .input-group label i { color: #1b5e3a; margin-left: 5px; }
+        .input-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .input-row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        select, input[type="file"], input[type="text"] {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            font-family: 'Tajawal', sans-serif;
+            transition: all 0.2s;
+            background: white;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #1b5e3a;
+            box-shadow: 0 0 0 3px rgba(27,94,58,0.1);
+        }
+        select:disabled {
+            background: #f1f5f9;
+            cursor: not-allowed;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+            font-family: 'Tajawal', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: #1b5e3a;
+            color: white;
+            box-shadow: 0 4px 10px rgba(27,94,58,0.3);
+        }
+        .btn-primary:hover:not(:disabled) { background: #0e3d24; transform: translateY(-2px); }
+        .btn-success { background: #0f3b2c; color: white; }
+        .btn-success:hover:not(:disabled) { background: #0a2a1f; transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+        .preview-card {
+            background: #f8fafc;
+            border-radius: 24px;
+            padding: 20px;
+            margin-top: 25px;
+            border: 1px solid #e2e8f0;
+        }
+        .preview-title {
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 450px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: white;
+        }
+        .table-wrapper::-webkit-scrollbar { width: 10px; height: 10px; }
+        .table-wrapper::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: #1b5e3a; border-radius: 10px; }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            background: white;
+            min-width: 600px;
+        }
+        .data-table th {
+            background: #1b5e3a;
+            color: white;
+            padding: 12px 10px;
+            font-weight: 600;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .data-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .data-table td:hover {
+            white-space: normal;
+            word-break: break-word;
+            background: #fff3cd;
+        }
+        .stats {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 16px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+        }
+        .badge {
+            display: inline-block;
+            background: #1b5e3a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            margin: 3px;
+        }
+        .info-note {
+            background: #e0f2fe;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #0369a1;
+        }
+        .file-info {
+            background: #dcfce7;
+            padding: 10px 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #166534;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .content { padding: 20px; }
+            .btn-group { flex-direction: column; }
+            .table-wrapper { max-height: 350px; }
+            .input-row { flex-direction: column; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="main-card">
+        <div class="header">
+            <h1>نظام تقنين طلبات المراكز</h1>
+            <p>استخراج المراكز من العناوين أو أرقام الطلبات • تصدير Excel بجداول منسقة</p>
+        </div>
+        <div class="content">
+            <div class="mode-switch">
+                <button class="mode-btn active" data-mode="address">📍 تقسيم حسب العنوان</button>
+                <button class="mode-btn" data-mode="order">🔢 تقسيم حسب رقم الطلب</button>
+            </div>
+
+            <div class="input-group">
+                <label><i>📂</i> رفع ملف Excel</label>
+                <input type="file" id="uploadExcel" accept=".xlsx, .xls, .xlsm, .csv">
+                <div id="fileInfo" class="file-info"></div>
+            </div>
+
+            <div id="addressModeArea">
+                <div class="input-group">
+                    <label><i>📌</i> اختر عمود "العنوان" الذي يحتوي على اسم المركز</label>
+                    <select id="addressColumnSelect" disabled>
+                        <option value="">🔽 انتظر رفع الملف أولاً...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="orderModeArea" style="display: none;">
+                <div class="input-group">
+                    <label><i>🔢</i> اختر عمود "رقم الطلب"</label>
+                    <select id="orderColumnSelect" disabled>
+                        <option value="">🔽 انتظر رفع الملف أولاً...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="input-group" style="flex: 2;">
+                    <label><i>✏️</i> كلمة التوصيف (تضاف لاسم الملف)</label>
+                    <input type="text" id="description" placeholder="مثال: مرفوض ميدانى" value="مرفوض ميدانى">
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label><i>📄</i> اسم الملف المجمع</label>
+                    <input type="text" id="summaryFileName" value="00_جميع_الطلبات_مجمع">
+                </div>
+            </div>
+            <div class="info-note">
+                💡 ملاحظة: ملفات المراكز تخرج بصيغة: "مركز [الاسم] [العدد] طلب (التوصيف).xlsx" + ملف مجمع بكل الطلبات
+            </div>
+
+            <div class="btn-group">
+                <button id="processBtn" class="btn btn-primary" disabled>⚙️ معالجة وإضافة عمود المركز</button>
+                <button id="splitBtn" class="btn btn-success" disabled>📦 تقسيم وتحميل ZIP</button>
+            </div>
+
+            <div id="resultPreview" class="preview-card" style="display: none;">
+                <div class="preview-title">📋 معاينة البيانات (أول 50 صفاً)</div>
+                <div class="table-wrapper" id="tableWrapper">
+                    <div id="previewTable"></div>
+                </div>
+                <div id="statsArea" class="stats"></div>
+            </div>
+            <div id="statusMsg" style="margin-top: 15px; font-weight: 500;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======================== البيانات والقواعد ========================
+    const allCenters = ["أبو قرقاص", "العدوة", "بني مزار", "مطاي", "سمالوط", "المنيا", "ملوي", "دير مواس", "مغاغة"];
+    
+    const synonyms = {
+        "ابوقرقاص": "أبو قرقاص", "ابو قرقاص": "أبو قرقاص",
+        "العدوه": "العدوة", "بنى مزار": "بني مزار",
+        "مطاى": "مطاي", "مَلوي": "ملوي",
+        "ديرمواس": "دير مواس", "مغاغه": "مغاغة"
+    };
+
+    function getCenterFromOrderNumber(orderNum) {
+        if (!orderNum) return "غير معروف";
+        let str = String(orderNum).trim();
+        let parts = str.split("-");
+        if (parts.length < 3) return "غير معروف";
+        let codePart = parts[1] + "-" + parts[2];
+        
+        const rules = {
+            "X24-2414": "مغاغة", "X24-2415": "مغاغة",
+            "X24-2413": "بني مزار",
+            "X24-2412": "مطاي",
+            "X24-2411": "سمالوط", "X24-2410": "سمالوط",
+            "X24-2405": "المنيا", "X24-2404": "المنيا", "X24-2401": "المنيا",
+            "X24-2402": "المنيا", "X24-2403": "المنيا",
+            "X24-2406": "أبو قرقاص",
+            "X24-2408": "ملوي", "X24-2407": "ملوي",
+            "X24-2409": "دير مواس",
+            "X24-2499": "الظهير الصحراوي"
+        };
+        return rules[codePart] || "غير معروف";
+    }
+
+    function extractCenterFromAddress(text) {
+        if (!text) return "غير محدد";
+        let txt = text.toString().trim();
+        let found = [];
+        for (let [key, val] of Object.entries(synonyms)) {
+            if (txt.includes(key)) if (!found.includes(val)) found.push(val);
+        }
+        let normalized = txt.replace(/[ىي]/g, 'ي').replace(/[أإآ]/g, 'ا');
+        for (let center of allCenters) {
+            let normCenter = center.replace(/[ىي]/g, 'ي').replace(/[أإآ]/g, 'ا');
+            if (normalized.includes(normCenter)) if (!found.includes(center)) found.push(center);
+        }
+        if (found.length === 0) return "غير محدد";
+        if (found.length > 1) {
+            let nonMenia = found.filter(c => c !== "المنيا");
+            if (nonMenia.length > 0) return nonMenia[0];
+        }
+        return found[0];
+    }
+
+    // ======================== متغيرات عامة ========================
+    let workbook = null, originalData = [], headers = [], selectedMode = "address";
+    let processedData = [];
+    let addressCol = "", orderCol = "";
+    
+    const fileInput = document.getElementById('uploadExcel');
+    const addressSelect = document.getElementById('addressColumnSelect');
+    const orderSelect = document.getElementById('orderColumnSelect');
+    const processBtn = document.getElementById('processBtn');
+    const splitBtn = document.getElementById('splitBtn');
+    const descInput = document.getElementById('description');
+    const summaryFileNameInput = document.getElementById('summaryFileName');
+    const previewDiv = document.getElementById('resultPreview');
+    const previewTableDiv = document.getElementById('previewTable');
+    const statsArea = document.getElementById('statsArea');
+    const statusMsgDiv = document.getElementById('statusMsg');
+    const fileInfoDiv = document.getElementById('fileInfo');
+    const addressArea = document.getElementById('addressModeArea');
+    const orderArea = document.getElementById('orderModeArea');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    
+    // تبديل الوضع
+    modeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedMode = btn.dataset.mode;
+            if (selectedMode === 'address') {
+                addressArea.style.display = 'block';
+                orderArea.style.display = 'none';
+            } else {
+                addressArea.style.display = 'none';
+                orderArea.style.display = 'block';
+            }
+            if (originalData.length > 0) processBtn.disabled = false;
+            previewDiv.style.display = 'none';
+        });
+    });
+    
+    // دالة لقراءة أسماء الأعمدة بشكل صحيح
+    function loadSheetData(workbookData) {
+        try {
+            const firstSheet = workbookData.Sheets[workbookData.SheetNames[0]];
+            
+            // تحويل إلى JSON مع خيار header: 1 للحصول على الصفوف كـ arrays
+            const rawRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+            
+            if (!rawRows || rawRows.length === 0) {
+                throw new Error("الملف فارغ");
+            }
+            
+            // البحث عن أول صف غير فارغ لاستخدامه كـ header
+            let headerRowIndex = 0;
+            let validHeaders = [];
+            
+            for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+                const row = rawRows[i];
+                if (row && row.length > 0) {
+                    const nonEmptyCount = row.filter(cell => cell && String(cell).trim() !== "").length;
+                    if (nonEmptyCount >= 2) {
+                        headerRowIndex = i;
+                        validHeaders = row.map(cell => cell ? String(cell).trim() : `عمود_${Math.random()}`);
+                        break;
+                    }
+                }
+            }
+            
+            if (validHeaders.length === 0) {
+                // إذا لم نجد صف header، نستخدم أرقام للأعمدة
+                const maxCols = Math.max(...rawRows.map(r => r.length));
+                validHeaders = Array.from({ length: maxCols }, (_, i) => `عمود_${i + 1}`);
+                headerRowIndex = 0;
+            }
+            
+            // إزالة الأعمدة المكررة في headers
+            const uniqueHeaders = [];
+            const headerSet = new Set();
+            for (let h of validHeaders) {
+                let cleanH = h || "عمود_فارغ";
+                if (!headerSet.has(cleanH)) {
+                    headerSet.add(cleanH);
+                    uniqueHeaders.push(cleanH);
+                } else {
+                    let counter = 1;
+                    while (headerSet.has(`${cleanH}_${counter}`)) counter++;
+                    const newH = `${cleanH}_${counter}`;
+                    headerSet.add(newH);
+                    uniqueHeaders.push(newH);
+                }
+            }
+            
+            // تحويل البيانات إلى كائنات باستخدام headers الفريدة
+            const jsonData = [];
+            for (let i = headerRowIndex + 1; i < rawRows.length; i++) {
+                const row = rawRows[i];
+                if (!row || row.length === 0) continue;
+                const rowObj = {};
+                for (let j = 0; j < uniqueHeaders.length; j++) {
+                    const val = (j < row.length && row[j] !== undefined && row[j] !== null) ? row[j] : "";
+                    rowObj[uniqueHeaders[j]] = val;
+                }
+                // تجاهل الصفوف الفارغة تماماً
+                const hasData = Object.values(rowObj).some(v => v && String(v).trim() !== "");
+                if (hasData) jsonData.push(rowObj);
+            }
+            
+            if (jsonData.length === 0) {
+                throw new Error("لا توجد بيانات صالحة في الملف");
+            }
+            
+            return { headers: uniqueHeaders, data: jsonData };
+        } catch (err) {
+            console.error("خطأ في قراءة الملف:", err);
+            throw err;
+        }
+    }
+    
+    // رفع الملف
+// ===== الجزء المعدل =====
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // ==== التغيير الجديد: تعيين اسم الملف كتوصيف تلقائي ====
+    const fileNameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('description').value = fileNameWithoutExt;
+
+    statusMsgDiv.innerHTML = "⏳ جاري قراءة الملف...";
+    fileInfoDiv.style.display = "none";
+    
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            const data = new Uint8Array(evt.target.result);
+            workbook = XLSX.read(data, { type: 'array', defval: "", cellDates: false });
+            
+            const { headers: loadedHeaders, data: loadedData } = loadSheetData(workbook);
+            headers = loadedHeaders;
+            originalData = loadedData;
+            
+            fileInfoDiv.innerHTML = `✅ تم رفع الملف: ${file.name}<br>📊 عدد الأعمدة: ${headers.length} | عدد الصفوف: ${originalData.length}`;
+            fileInfoDiv.style.display = "block";
+            
+            [addressSelect, orderSelect].forEach(sel => {
+                sel.innerHTML = '<option value="">🔽 اختر عمود...</option>';
+                sel.disabled = false;
+                headers.forEach(h => {
+                    let opt = document.createElement('option');
+                    opt.value = h;
+                    opt.textContent = h;
+                    sel.appendChild(opt);
+                });
+            });
+            
+            statusMsgDiv.innerHTML = `✅ تم رفع الملف بنجاح. تم العثور على ${headers.length} عمود و ${originalData.length} صف. اختر العمود المناسب ثم اضغط معالجة.`;
+            processBtn.disabled = false;
+            splitBtn.disabled = true;
+            previewDiv.style.display = 'none';
+            
+        } catch (err) {
+            console.error(err);
+            statusMsgDiv.innerHTML = `❌ خطأ في قراءة الملف: ${err.message}`;
+            alert(`خطأ: ${err.message}\nتأكد من أن ملف Excel يحتوي على بيانات صحيحة.`);
+        }
+    };
+    reader.onerror = function() {
+        statusMsgDiv.innerHTML = "❌ خطأ في قراءة الملف";
+        alert("حدث خطأ أثناء قراءة الملف");
+    };
+    reader.readAsArrayBuffer(file);
+});
+// ===== نهاية الجزء المعدل =====    
+    function processData() {
+        if (!originalData.length) { alert("يرجى رفع ملف أولاً"); return; }
+        
+        if (selectedMode === 'address') {
+            addressCol = addressSelect.value;
+            if (!addressCol) { alert("اختر عمود العنوان"); return; }
+            processedData = originalData.map(row => {
+                let center = extractCenterFromAddress(row[addressCol] || "");
+                return { ...row, "اسم المركز": center };
+            });
+        } else {
+            orderCol = orderSelect.value;
+            if (!orderCol) { alert("اختر عمود رقم الطلب"); return; }
+            processedData = originalData.map(row => {
+                let center = getCenterFromOrderNumber(row[orderCol] || "");
+                return { ...row, "اسم المركز": center };
+            });
+        }
+        
+        // عرض معاينة
+        let previewRows = processedData.slice(0, 50);
+        let allKeys = Object.keys(previewRows[0] || {});
+        let html = `<table class="data-table"><thead><tr>`;
+        allKeys.forEach(k => html += `<th>${k}</th>`);
+        html += `</tr></thead><tbody>`;
+        previewRows.forEach(row => {
+            html += `<tr>`;
+            allKeys.forEach(k => {
+                let val = row[k] !== undefined && row[k] !== null ? String(row[k]) : "";
+                let displayVal = val.length > 50 ? val.substring(0, 50) + '...' : val;
+                html += `<td title="${val.replace(/"/g, '&quot;')}">${displayVal || "—"}</td>`;
+            });
+            html += `</tr>`;
+        });
+        if (processedData.length > 50) {
+            html += `<tr><td colspan="${allKeys.length}" style="text-align:center; background:#fef3c7;">... و ${processedData.length - 50} صف إضافي</td></tr>`;
+        }
+        html += `</tbody></table>`;
+        previewTableDiv.innerHTML = html;
+        
+        let stats = {};
+        processedData.forEach(row => { let c = row["اسم المركز"]; stats[c] = (stats[c] || 0) + 1; });
+        let statsHtml = `<strong>📊 إجمالي الطلبات: ${processedData.length}</strong><br>`;
+        for (let [c, cnt] of Object.entries(stats).sort((a,b)=>b[1]-a[1])) {
+            statsHtml += `<span class="badge">${c}: ${cnt} طلب</span> `;
+        }
+        statsArea.innerHTML = statsHtml;
+        previewDiv.style.display = 'block';
+        splitBtn.disabled = false;
+        statusMsgDiv.innerHTML = "✅ تمت المعالجة. يمكنك الآن التقسيم إلى ملفات منسقة.";
+        
+        const wrapper = document.querySelector('.table-wrapper');
+        if (wrapper) { wrapper.scrollTop = 0; wrapper.scrollLeft = 0; }
+    }
+    
+    // دالة تنسيق Excel
+    async function createFormattedExcel(rows, sheetName) {
+        const Excel = window.ExcelJS;
+        const workbook = new Excel.Workbook();
+        workbook.creator = "نظام تقنين المراكز";
+        
+        const worksheet = workbook.addWorksheet(sheetName, {
+            pageSetup: { paperSize: 9, orientation: 'landscape' }
+        });
+        
+        if (!rows || rows.length === 0) return workbook;
+        
+        const headersList = Object.keys(rows[0]);
+        
+        const headerRow = worksheet.addRow(headersList);
+        headerRow.font = { name: 'Tajawal', bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B5E3A' } };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        headerRow.height = 30;
+        
+        rows.forEach((rowData, idx) => {
+            const rowValues = headersList.map(h => rowData[h] !== undefined && rowData[h] !== null ? rowData[h] : "");
+            const row = worksheet.addRow(rowValues);
+            row.font = { name: 'Tajawal', size: 11 };
+            row.alignment = { vertical: 'top', horizontal: 'center', wrapText: true };
+            row.height = 25;
+            
+            if ((idx + 1) % 2 === 0) {
+                row.eachCell(cell => {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+                });
+            }
+        });
+        
+        // ضبط عرض الأعمدة
+        worksheet.columns = headersList.map(h => {
+            let maxLength = h.length;
+            rows.slice(0, 100).forEach(row => {
+                const val = row[h] ? String(row[h]).length : 0;
+                maxLength = Math.max(maxLength, Math.min(val, 60));
+            });
+            return { width: Math.min(Math.max(maxLength + 5, 12), 50) };
+        });
+        
+        worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+        worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: rows.length + 1, column: headersList.length } };
+        
+        return workbook;
+    }
+    
+    async function splitAndDownload() {
+        if (!processedData.length) { alert("قم بمعالجة البيانات أولاً"); return; }
+        let description = descInput.value.trim() || "بدون توصيف";
+        let summaryFileName = summaryFileNameInput.value.trim() || "00_جميع_الطلبات_مجمع";
+        
+        let groups = new Map();
+        for (let row of processedData) {
+            let center = row["اسم المركز"];
+            if (!groups.has(center)) groups.set(center, []);
+            groups.get(center).push(row);
+        }
+        
+        let zip = new JSZip();
+        let fileCount = 0;
+        
+        statusMsgDiv.innerHTML = "📝 جاري إنشاء الملفات...";
+        
+        // الملف المجمع
+        try {
+            const summaryWorkbook = await createFormattedExcel(processedData, "جميع الطلبات");
+            const summaryBuffer = await summaryWorkbook.xlsx.writeBuffer();
+            zip.file(`${summaryFileName}.xlsx`, summaryBuffer);
+            fileCount++;
+        } catch (err) {
+            console.error("خطأ في الملف المجمع:", err);
+        }
+        
+        // ملفات المراكز
+        for (let [center, rows] of groups.entries()) {
+            let count = rows.length;
+            let fileName = `مركز ${center} ${count} طلب (${description}).xlsx`;
+            fileName = fileName.replace(/[\\/:*?"<>|]/g, '_');
+            
+            try {
+                const formattedWorkbook = await createFormattedExcel(rows, "الطلبات");
+                const buffer = await formattedWorkbook.xlsx.writeBuffer();
+                zip.file(fileName, buffer);
+                fileCount++;
+            } catch (err) {
+                console.error(`خطأ في ملف ${center}:`, err);
+            }
+        }
+        
+        if (fileCount === 0) { alert("لم يتم إنشاء أي ملفات"); return; }
+        
+        const content = await zip.generateAsync({ type: "blob" });
+        saveAs(content, `تقسيم_الطلبات_${Date.now()}.zip`);
+        statusMsgDiv.innerHTML = `✅ تم التحميل! ${fileCount} ملف (${groups.size} مركز + 1 ملف مجمع)`;
+    }
+    
+    processBtn.addEventListener('click', processData);
+    splitBtn.addEventListener('click', splitAndDownload);
+</script>
+</body>
+</html>
