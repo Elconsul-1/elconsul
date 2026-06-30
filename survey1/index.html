@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة الرفع المساحي</title>
+    <title>نظام مراجعة الطلبات</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -326,6 +326,15 @@
             .map-panel { min-height: 300px; }
             .header-stats { display: none; }
         }
+
+        /* Manual entry */
+        .manual-points-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:260px; overflow-y:auto; }
+        .manual-point-row { display:flex; gap:6px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:6px 8px; }
+        .manual-point-row input { flex:1; padding:6px 8px; border:1px solid var(--border); border-radius:5px; font-size:12px; }
+        .manual-point-row .pt-label { font-size:11px; color:var(--text-muted); width:18px; text-align:center; flex-shrink:0; }
+        .manual-field { margin-top:10px; }
+        .manual-field label { font-size:13px; font-weight:600; color:var(--navy-mid); display:block; margin-bottom:5px; }
+        .manual-field input, .manual-field select { width:100%; padding:8px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
     </style>
 </head>
 <body>
@@ -334,7 +343,7 @@
 <header class="header">
     <div class="header-brand">
         <div class="logo">🗺️</div>
-        <h1>نظام إدارة الرفع المساحي</h1>
+        <h1>نظام مراجعة الطلبات</h1>
     </div>
     <div class="header-stats">
         <div class="stat-chip">📋 الطلبات: <strong id="totalOrders">0</strong></div>
@@ -387,6 +396,7 @@
                 <button class="btn btn-earth" onclick="openGoogleEarthAll()">🌍 Google Earth</button>
                 <button class="btn btn-navy" onclick="uploadBoundary()">⬛ حدود الحيز</button>
                 <button class="btn btn-red" onclick="deleteSelectedOrders()">🗑️ حذف المحدد</button>
+                <button class="btn btn-navy btn-full" onclick="openManualEntryModal()">✍️ إدخال يدوي (رفع مساحى / منسوب)</button>
                 <div class="sel-badge" id="selectedCountBadge">0 محدد</div>
             </div>
 
@@ -572,6 +582,76 @@
     </div>
 </div>
 
+<!-- Manual Entry -->
+<div class="modal" id="manualEntryModal">
+    <div class="modal-box" style="max-width:560px;">
+        <div class="modal-head">
+            <h3>✍️ إدخال يدوي (بدون إكسل)</h3>
+            <button class="modal-close" onclick="closeManualEntryModal()">×</button>
+        </div>
+
+        <div class="mode-panel">
+            <label class="mode-opt">
+                <input type="radio" name="manualMode" value="survey" checked onchange="toggleManualMode()">
+                <div>
+                    <div class="opt-title">رفع مساحي (بوليجون)</div>
+                    <div class="opt-desc">أدخل 3 نقاط أو أكثر يدويًا، وسيتم رسم البوليجون والتقاط صورة له.</div>
+                </div>
+            </label>
+            <label class="mode-opt">
+                <input type="radio" name="manualMode" value="elevation" onchange="toggleManualMode()">
+                <div>
+                    <div class="opt-title">منسوب (نقطة)</div>
+                    <div class="opt-desc">أدخل إحداثي واحد والمنسوب يدويًا، وسيتم التقاط صورة للنقطة مع المنسوب مكتوبًا عليها.</div>
+                </div>
+            </label>
+        </div>
+
+        <div class="manual-field">
+            <label>رقم الطلب (اختياري — سيتولد تلقائياً إن تُرك فارغاً)</label>
+            <input type="text" id="manualOrderId" placeholder="مثال: 6060001">
+        </div>
+        <div class="manual-field">
+            <label>اسم المالك (اختياري)</label>
+            <input type="text" id="manualOwnerName" placeholder="اسم طالب الخدمة">
+        </div>
+
+        <!-- Survey points -->
+        <div id="manualSurveySection">
+            <div class="manual-field" style="margin-top:14px;">
+                <label>نقاط البوليجون (خط العرض Lat , خط الطول Long)</label>
+                <div class="manual-points-list" id="manualPointsList"></div>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn btn-accent" type="button" onclick="addManualPoint()">➕ إضافة نقطة</button>
+                    <button class="btn btn-gray" type="button" onclick="removeManualPoint()">➖ حذف آخر نقطة</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Elevation point -->
+        <div id="manualElevationSection" style="display:none;">
+            <div class="manual-field" style="margin-top:14px;">
+                <label>خط العرض Lat</label>
+                <input type="text" id="manualElevLat" placeholder="مثال: 28.0871">
+            </div>
+            <div class="manual-field">
+                <label>خط الطول Long</label>
+                <input type="text" id="manualElevLng" placeholder="مثال: 30.7618">
+            </div>
+            <div class="manual-field">
+                <label>قيمة المنسوب (تُكتب يدويًا على الصورة)</label>
+                <input type="text" id="manualElevValue" placeholder="مثال: 52.350">
+            </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+            <button class="btn btn-purple" onclick="confirmManualEntryAndCapture()">🛰️ إنشاء + التقاط صورة</button>
+            <button class="btn btn-accent" onclick="confirmManualEntry()">💾 إضافة للجدول فقط</button>
+            <button class="btn btn-gray" onclick="closeManualEntryModal()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ============================================================
 // 1. GLOBALS & CONFIG
@@ -595,7 +675,7 @@ const defaultConfig = {
     'نشاط':[{min:0,max:50,price:600},{min:51,max:100,price:1000},{min:101,max:500,price:1500},{min:501,max:1000,price:3000},{min:1001,max:Infinity,price:3000}]
 };
 let config=JSON.parse(JSON.stringify(defaultConfig));
-const typeNames={'صلاحية موقع مدينة':'📍 موقع - مدينة','صلاحية موقع قرية':'📍 موقع - قرية','نشاط':'🏪 نشاط'};
+const typeNames={'صلاحية موقع مدينة':'📍 موقع - مدينة','صلاحية موقع قرية':'📍 موقع - قرية','نشاط':'🏪 '};
 const typeCategories={'صلاحية موقع مدينة':'صلاحية موقع','صلاحية موقع قرية':'صلاحية موقع','نشاط':'نشاط'};
 let allCenters=[];
 
@@ -625,13 +705,6 @@ function formatNumberValue(value,fallback='—'){if(!Number.isFinite(value))retu
 // ============================================================
 // 3. GEOMETRY — PRESERVE ORIGINAL ORDER (do NOT angle-sort)
 // ============================================================
-// IMPORTANT: Points must be drawn in the exact order the surveyor walked
-// the boundary (as entered in the Excel columns Lat0/Long0, Lat1/Long1, ...).
-// Sorting by angle around the centroid only works for CONVEX shapes
-// (rectangles, triangles). For a CONCAVE shape (e.g. an "L"-shaped plot),
-// angle-sorting breaks the real walking order and produces a distorted
-// arrow/triangle instead of the true boundary. So we only de-duplicate
-// identical points here and leave the order exactly as provided.
 function removeDuplicateCoords(coords){
     if(!coords||coords.length<3)return coords;
     const unique=[];const seen=new Set();
@@ -770,8 +843,29 @@ function handleFile(event){
 // ============================================================
 // 8. PROCESS ORDERS
 // ============================================================
+function findDuplicateRequestNumbers(data,idGetter){
+    const counts={};
+    data.forEach((row,index)=>{
+        const id=String(idGetter(row,index)||'').trim();
+        if(!id)return;
+        if(!counts[id])counts[id]=0;
+        counts[id]++;
+    });
+    return Object.keys(counts).filter(id=>counts[id]>1);
+}
+function warnIfDuplicateRequestNumbers(data,idGetter){
+    const dups=findDuplicateRequestNumbers(data,idGetter);
+    if(dups.length){
+        const list=dups.slice(0,30).join('، ');
+        const more=dups.length>30?` ... و${dups.length-30} رقم آخر`:'';
+        alert(`⚠️ تنبيه: يوجد ${dups.length} رقم طلب مكرر في ملف الإكسل:\n${list}${more}\n\nسيتم استيراد جميع الصفوف، يرجى مراجعة الأرقام المكررة.`);
+    }
+    return dups;
+}
+
 function processOrders(data){
     if(!data||!data.length)return;
+    warnIfDuplicateRequestNumbers(data,(row,index)=>row['رقم الطلب']||row['RequestNumber']||index+1);
     orders=data.map((row,index)=>{
         let coords=[];
         for(let i=0;i<=7;i++){
@@ -782,8 +876,6 @@ function processOrders(data){
             for(let k of lngKeys){if(row[k]!==undefined&&row[k]!==''&&row[k]!==null){const v=parseFloat(row[k]);if(!isNaN(v)&&v!==0){lng=v;break;}}}
             if(lat!==null&&lng!==null&&!isNaN(lat)&&!isNaN(lng)&&lat!==0&&lng!==0)coords.push({lat,lng});
         }
-        // FIX: keep original surveyed order (only drop exact duplicate points) —
-        // angle-sorting was breaking concave (e.g. L-shaped) plots
         if(coords.length>=3)coords=removeDuplicateCoords(coords);
         const requestNumber=String(row['رقم الطلب']||row['RequestNumber']||index+1);
         const owner=row['اسم طالب الخدمة']||row['OwnerName']||'غير محدد';
@@ -920,9 +1012,6 @@ function renderOrdersTable(ordersList=orders){
     const table=document.getElementById('ordersTable');
     if(!ordersList||!ordersList.length){tbody.innerHTML=`<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">لا توجد بيانات</td></tr>`;return;}
 
-    // Compute the real selection state of the rows currently displayed so the
-    // header "select all" checkbox always reflects reality after a re-render
-    // (previously it was rebuilt unchecked every time, which broke "deselect all").
     const allSelected=ordersList.length>0 && ordersList.every(o=>selectedOrderIds.has(o.id));
     const someSelected=ordersList.some(o=>selectedOrderIds.has(o.id));
     const selAllAttr=allSelected?'checked':'';
@@ -940,8 +1029,6 @@ function renderOrdersTable(ordersList=orders){
         tbody.innerHTML=ordersList.map(o=>buildOrderRowHtml(o)).join('');
     }
 
-    // Show a partial-selection (indeterminate) state when some but not all
-    // visible rows are selected, like a typical "select all" checkbox.
     const selAllCb=table.querySelector('thead input[type="checkbox"]');
     if(selAllCb) selAllCb.indeterminate = someSelected && !allSelected;
 
@@ -969,16 +1056,9 @@ function buildElevationRowHtml(order){
 function updateSelectedCountBadge(){const b=document.getElementById('selectedCountBadge');if(b)b.textContent=`${selectedOrderIds.size} محدد`;}
 function toggleSelectedOrder(orderId,checked){if(checked)selectedOrderIds.add(orderId);else selectedOrderIds.delete(orderId);updateSelectedCountBadge();}
 function toggleSelectAllOrders(checked){
-    // Select-all should only affect the rows currently visible in the table
-    // (i.e. respecting any active filters), not every order in memory.
     const visible=(currentTableOrders&&currentTableOrders.length)?currentTableOrders:(orders||[]);
     if(checked)visible.forEach(o=>selectedOrderIds.add(o.id));
     else visible.forEach(o=>selectedOrderIds.delete(o.id));
-    // Defensive direct DOM sync: force every row checkbox currently in the
-    // table to match the new state immediately. This avoids any edge case
-    // where the browser tries to preserve a checkbox's checked state across
-    // an innerHTML replacement instead of picking up the freshly rendered
-    // "checked" attribute.
     const tbody=document.getElementById('ordersBody');
     if(tbody){
         tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>{cb.checked=!!checked;});
@@ -997,16 +1077,11 @@ function deleteSelectedOrders(){
 // ============================================================
 // 9b. ROW <-> POLYGON SYNC
 // ============================================================
-// Called when a table row (or its order-number link) is clicked.
-// Zooms to the order AND marks it as the "active linked" item so the
-// matching polygon/marker gets a distinct highlight color on the map.
 function onOrderRowClick(orderId){
     setActiveLinkedOrder(orderId);
     zoomToOrder(orderId);
 }
 
-// Called when a polygon/marker on the map is clicked.
-// Marks the order as active and scrolls/highlights its table row.
 function onMapShapeClick(orderId){
     setActiveLinkedOrder(orderId);
     highlightTableRow(orderId);
@@ -1014,7 +1089,6 @@ function onMapShapeClick(orderId){
 
 function setActiveLinkedOrder(orderId){
     activeLinkedOrderId=orderId;
-    // Re-render table rows' active class without a full re-render (cheap class toggle)
     const tbody=document.getElementById('ordersBody');
     if(tbody){
         tbody.querySelectorAll('tr[data-order-id]').forEach(tr=>{
@@ -1022,7 +1096,6 @@ function setActiveLinkedOrder(orderId){
             else tr.classList.remove('row-active-link');
         });
     }
-    // Re-style polygons/markers on the map to reflect the active selection
     restyleMapShapesForActiveOrder();
 }
 
@@ -1095,6 +1168,7 @@ function confirmUploadMode(){
 
 function processElevation(data,zColumnName,urbanColumnName){
     if(!data||!data.length)return;
+    warnIfDuplicateRequestNumbers(data,(row,index)=>row['رقم الطلب']||row['RequestNumber']||index+1);
     orders=data.map((row,index)=>{
         const latKeys=['Lat','latitude','خط العرض','عرض','lat','LAT'];
         const lngKeys=['Long','longitude','خط الطول','طول','lng','LON','lon'];
@@ -1119,6 +1193,92 @@ function processElevation(data,zColumnName,urbanColumnName){
     });
     allCenters=[...new Set(orders.map(o=>o.center))].filter(c=>c&&c!=='مركز غير معروف'&&c!=='غير محدد'&&c!=='');
     updateCenterFilter();saveToLocalStorage();
+}
+
+// ============================================================
+// 10b. MANUAL ENTRY (no Excel — type coordinates / elevation by hand)
+// ============================================================
+function openManualEntryModal(){
+    document.getElementById('manualOrderId').value='';
+    document.getElementById('manualOwnerName').value='';
+    document.getElementById('manualElevLat').value='';
+    document.getElementById('manualElevLng').value='';
+    document.getElementById('manualElevValue').value='';
+    document.querySelector('input[name="manualMode"][value="survey"]').checked=true;
+    const list=document.getElementById('manualPointsList');
+    list.innerHTML='';
+    for(let i=0;i<3;i++)addManualPoint(); // start with 3 points (minimum for a polygon)
+    toggleManualMode();
+    document.getElementById('manualEntryModal').classList.add('open');
+}
+function closeManualEntryModal(){document.getElementById('manualEntryModal').classList.remove('open');}
+function toggleManualMode(){
+    const mode=document.querySelector('input[name="manualMode"]:checked')?.value||'survey';
+    document.getElementById('manualSurveySection').style.display=mode==='survey'?'block':'none';
+    document.getElementById('manualElevationSection').style.display=mode==='elevation'?'block':'none';
+}
+function addManualPoint(){
+    const list=document.getElementById('manualPointsList');
+    const idx=list.children.length+1;
+    const row=document.createElement('div');
+    row.className='manual-point-row';
+    row.innerHTML=`<span class="pt-label">${idx}</span><input type="text" class="manual-pt-lat" placeholder="Lat خط العرض"><input type="text" class="manual-pt-lng" placeholder="Long خط الطول">`;
+    list.appendChild(row);
+}
+function removeManualPoint(){
+    const list=document.getElementById('manualPointsList');
+    if(list.children.length<=3){alert('⚠️ أقل عدد للبوليجون 3 نقاط');return;}
+    list.removeChild(list.lastElementChild);
+}
+function buildManualOrderObject(){
+    const mode=document.querySelector('input[name="manualMode"]:checked')?.value||'survey';
+    let id=document.getElementById('manualOrderId').value.trim();
+    if(!id)id='يدوي-'+Date.now();
+    if(orders.some(o=>o.id===id)){alert('⚠️ رقم الطلب موجود بالفعل، استخدم رقمًا آخر');return null;}
+    const owner=document.getElementById('manualOwnerName').value.trim()||'إدخال يدوي';
+
+    if(mode==='survey'){
+        const rows=document.querySelectorAll('#manualPointsList .manual-point-row');
+        const coords=[];
+        rows.forEach(r=>{
+            const lat=parseFloat(r.querySelector('.manual-pt-lat').value);
+            const lng=parseFloat(r.querySelector('.manual-pt-lng').value);
+            if(!isNaN(lat)&&!isNaN(lng)&&lat!==0&&lng!==0)coords.push({lat,lng});
+        });
+        if(coords.length<3){alert('⚠️ أدخل 3 نقاط صحيحة على الأقل');return null;}
+        return{id,owner,center:getCenterFromCode(id),date:'',typeId:'نشاط',typeName:typeNames['نشاط'],typeCategory:typeCategories['نشاط'],coords:removeDuplicateCoords(coords),area:null,drawnArea:null,areaDifference:null,paid:0,due:null,remaining:null,status:'إدخال يدوي',northernBorder:'',southernBorder:'',easternBorder:'',westernBorder:'',isManual:true};
+    }else{
+        const lat=parseFloat(document.getElementById('manualElevLat').value);
+        const lng=parseFloat(document.getElementById('manualElevLng').value);
+        const elevRaw=document.getElementById('manualElevValue').value.trim();
+        if(isNaN(lat)||isNaN(lng)){alert('⚠️ أدخل إحداثيات صحيحة');return null;}
+        if(elevRaw===''){alert('⚠️ أدخل قيمة المنسوب');return null;}
+        const elev=parseFloat(elevRaw);
+        return{id,owner,center:getCenterFromCode(id),date:'',typeId:'نشاط',typeName:typeNames['نشاط'],typeCategory:typeCategories['نشاط'],coords:null,point:{lat,lng},elevation:isNaN(elev)?elevRaw:elev,originalRow:{},originalHeaders:[],insideFlag:null,isElevation:true,isManual:true,area:null,drawnArea:null,areaDifference:null,paid:0,due:null,remaining:null,status:'منسوب يدوي'};
+    }
+}
+function confirmManualEntry(){
+    const order=buildManualOrderObject();
+    if(!order)return;
+    orders.push(order);
+    if(order.center&&order.center!=='مركز غير معروف'&&!allCenters.includes(order.center))allCenters.push(order.center);
+    updateCenterFilter();saveToLocalStorage();renderAll();updateStats();
+    closeManualEntryModal();
+    setActiveLinkedOrder(order.id);
+    if(mapInitialized&&map)zoomToOrder(order.id);
+    alert('✅ تمت إضافة الطلب اليدوي رقم '+order.id);
+}
+function confirmManualEntryAndCapture(){
+    const order=buildManualOrderObject();
+    if(!order)return;
+    orders.push(order);
+    if(order.center&&order.center!=='مركز غير معروف'&&!allCenters.includes(order.center))allCenters.push(order.center);
+    updateCenterFilter();saveToLocalStorage();renderAll();updateStats();
+    closeManualEntryModal();
+    setActiveLinkedOrder(order.id);
+    if(!currentApiKey){alert('⚠️ ارفع مفتاح API أولاً لالتقاط الصورة. تمت إضافة الطلب للجدول فقط.');return;}
+    // Ask where to save, then capture exactly like any other order
+    captureSingleSatellite(order.id);
 }
 
 // ============================================================
@@ -1258,11 +1418,6 @@ function clearMarkers(){if(!markers||!markers.length)return;markers.forEach(m=>{
 // ============================================================
 // 14. ZOOM TO ORDER
 // ============================================================
-// Computes the closest zoom level so that the visible width on the ground
-// is approximately `desiredMeters` meters wide, at a given latitude and
-// pixel width of the map container. Used both for the "close zoom" capture
-// (elevation points) and can be reused anywhere a fixed ground-distance
-// zoom is needed.
 function zoomForGroundWidthMeters(centerLat,desiredMeters,pixelWidth){
     const mppAtZoom0=156543.03392*Math.cos(centerLat*Math.PI/180);
     let z=Math.log2((pixelWidth*mppAtZoom0)/desiredMeters);
@@ -1277,9 +1432,6 @@ function zoomToOrder(orderId){
         const bounds=new google.maps.LatLngBounds();
         order.coords.forEach(c=>bounds.extend(new google.maps.LatLng(c.lat,c.lng)));
         map.fitBounds(bounds);
-        // fitBounds is async — wait for the map to settle before forcing the
-        // extra zoom-in, otherwise the setZoom right after it can be ignored
-        // or based on a stale zoom value.
         google.maps.event.addListenerOnce(map,'idle',function(){
             const cur=map.getZoom();
             map.setZoom(Math.min(cur+5,21));
@@ -1396,9 +1548,40 @@ function startImageExtraction(validOrders,folderHandle){
     }
     processNext(0);
 }
+async function ensureWritePermission(folderHandle){
+    if(!folderHandle||typeof folderHandle.queryPermission!=='function')return true;
+    try{
+        const opts={mode:'readwrite'};
+        let status=await folderHandle.queryPermission(opts);
+        if(status==='granted')return true;
+        if(status==='prompt'){
+            status=await folderHandle.requestPermission(opts);
+            return status==='granted';
+        }
+        return false;
+    }catch(e){return false;}
+}
 async function saveBlobToFile(fileName,blob,folderHandle){
     if(shouldCancel)return;
-    if(folderHandle){try{const fh=await folderHandle.getFileHandle(fileName,{create:true});const w=await fh.createWritable();await w.write(blob);await w.close();return;}catch(err){console.warn('save failed',err);}}
+    if(folderHandle){
+        try{
+            const hasPermission=await ensureWritePermission(folderHandle);
+            if(!hasPermission){
+                console.warn('No write permission for folder, falling back to download for',fileName);
+                alert('⚠️ لم يتم منح صلاحية الكتابة على المجلد المختار، سيتم تنزيل الملف بدلاً من ذلك: '+fileName);
+                saveAs(blob,fileName);
+                return;
+            }
+            const fh=await folderHandle.getFileHandle(fileName,{create:true});
+            const w=await fh.createWritable();
+            await w.write(blob);
+            await w.close();
+            return;
+        }catch(err){
+            console.warn('save failed',err);
+            alert('⚠️ تعذر الحفظ في المجلد المختار، سيتم تنزيل الملف بدلاً من ذلك: '+fileName);
+        }
+    }
     saveAs(blob,fileName);
 }
 function blobToDataURL(blob){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onloadend=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});}
@@ -1426,8 +1609,47 @@ function normalizeCoords(coords){const unique=[];const seen=new Set();coords.for
 function simplifyCoords(coords,maxPoints=40){if(!coords||coords.length<=maxPoints)return coords;const step=Math.ceil(coords.length/maxPoints);const result=[];for(let i=0;i<coords.length;i+=step)result.push(coords[i]);if(result[result.length-1]!==coords[coords.length-1])result.push(coords[coords.length-1]);return result;}
 function encodeSignedNumber(num){let sgn=num<<1;if(num<0)sgn=~sgn;let encoded='';while(sgn>=0x20){encoded+=String.fromCharCode((0x20|(sgn&0x1f))+63);sgn>>=5;}encoded+=String.fromCharCode(sgn+63);return encoded;}
 function encodePolyline(coords){let lastLat=0,lastLng=0,result='';coords.forEach(point=>{const lat=Math.round(point.lat*1e5);const lng=Math.round(point.lng*1e5);result+=encodeSignedNumber(lat-lastLat);result+=encodeSignedNumber(lng-lastLng);lastLat=lat;lastLng=lng;});return result;}
-function waitForMapReady(mapInstance){return new Promise(resolve=>{let resolved=false;const finish=()=>{if(resolved)return;resolved=true;setTimeout(resolve,500);};if(!mapInstance||!google||!google.maps)return resolve();google.maps.event.addListenerOnce(mapInstance,'idle',finish);google.maps.event.addListenerOnce(mapInstance,'tilesloaded',finish);setTimeout(finish,5000);});}
-function waitForBadgeRendered(timeoutMs=1200){return new Promise(resolve=>{const start=Date.now();const check=()=>{try{const badge=document.getElementById('elevationBadge');if(badge&&badge.style.display!=='none'){const rect=badge.getBoundingClientRect();if(rect.width>2&&rect.height>2)return resolve(true);}}catch(e){}if(Date.now()-start>timeoutMs)return resolve(false);setTimeout(check,60);};check();});}
+function waitForMapReady(mapInstance){
+    return new Promise(resolve=>{
+        if(!mapInstance||!google||!google.maps)return resolve();
+        let resolved=false;
+        const done=()=>{if(resolved)return;resolved=true;resolve();};
+        const mapDiv=document.getElementById('map');
+        let attempts=0;
+        const pollTiles=()=>{
+            if(resolved)return;
+            attempts++;
+            try{google.maps.event.trigger(mapInstance,'resize');}catch(e){}
+            const tileHandler=google.maps.event.addListenerOnce(mapInstance,'tilesloaded',()=>{
+                if(resolved)return;
+                setTimeout(done,600);
+            });
+            setTimeout(()=>{
+                if(resolved)return;
+                try{google.maps.event.removeListener(tileHandler);}catch(e){}
+                if(attempts<5){pollTiles();}
+                else{done();}
+            },2000);
+        };
+        pollTiles();
+        setTimeout(done,15000);
+    });
+}
+function waitForBadgeRendered(timeoutMs=1500){
+    return new Promise(resolve=>{
+        const start=Date.now();
+        const check=()=>{
+            try{
+                const badge=document.getElementById('elevationBadge');
+                if(badge&&badge.style.display!=='none'&&badge.textContent&&badge.textContent.trim().length>2)
+                    return resolve(true);
+            }catch(e){}
+            if(Date.now()-start>timeoutMs)return resolve(false);
+            setTimeout(check,60);
+        };
+        check();
+    });
+}
 function calculateOptimalZoom(bounds){try{const ne=bounds.getNorthEast(),sw=bounds.getSouthWest();const maxDiff=Math.max(ne.lat()-sw.lat(),ne.lng()-sw.lng());if(maxDiff>10)return 6;if(maxDiff>5)return 8;if(maxDiff>2)return 10;if(maxDiff>1)return 12;if(maxDiff>0.5)return 14;if(maxDiff>0.2)return 16;if(maxDiff>0.05)return 18;return 20;}catch(e){return 18;}}
 function cropCanvasToContent(canvas){
     const ctx=canvas.getContext('2d');const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);const data=imageData.data;
@@ -1444,7 +1666,6 @@ function captureSatelliteImageWithHandle(order,folderHandle,callback){
     const width=1200,height=1200;
     if(order.coords&&order.coords.length>=3){captureHtml2Canvas(order,folderHandle,callback);return;}
     if(order.isElevation&&order.point&&order.point.lat&&order.point.lng){captureHtml2CanvasPoint(order,folderHandle,callback);return;}
-    // fallback static maps
     if(order.coords&&order.coords.length>=3){
         const nc=normalizeCoords(order.coords);const sc=simplifyCoords(nc,30);
         const bounds=new google.maps.LatLngBounds();sc.forEach(c=>bounds.extend(new google.maps.LatLng(c.lat,c.lng)));
@@ -1454,67 +1675,160 @@ function captureSatelliteImageWithHandle(order,folderHandle,callback){
         const url=`https://maps.googleapis.com/maps/api/staticmap?center=${center.lat()},${center.lng()}&zoom=${zoom}&size=${width}x${height}&scale=2&maptype=satellite&path=${encodeURIComponent(pathItems.join('|'))}&key=${currentApiKey}&format=jpg`;
         fetch(url,{cache:'no-store'}).then(r=>r.blob()).then(async blob=>{const fn=`${order.id}.jpg`;const b64=await blobToDataURL(blob);await saveBlobToFile(fn,blob,folderHandle);callback(true,b64);}).catch(()=>captureHtml2Canvas(order,folderHandle,callback));
     }else if(order.isElevation&&order.point){
-        // NEW: zoom computed so the visible ground width is ~150m, instead of a fixed zoom=20
         const closeZoom=zoomForGroundWidthMeters(order.point.lat,150,width);
         const url=`https://maps.googleapis.com/maps/api/staticmap?center=${order.point.lat},${order.point.lng}&zoom=${closeZoom}&size=${width}x${height}&scale=2&maptype=satellite&markers=color:0xff0000%7C${order.point.lat},${order.point.lng}&key=${currentApiKey}&format=jpg`;
         fetch(url,{cache:'no-store'}).then(r=>r.blob()).then(async blob=>{const fn=`${order.id}.jpg`;const b64=await blobToDataURL(blob);await saveBlobToFile(fn,blob,folderHandle);callback(true,b64);}).catch(()=>callback(false,null));
     }else callback(false,null);
 }
 function captureHtml2CanvasPoint(order,folderHandle,callback){
-    if(shouldCancel||!mapInitialized||!map){callback(false,null);return;}
-    const prevCenter=map.getCenter?map.getCenter():null,prevZoom=map.getZoom?map.getZoom():null;
-    const hiddenMarkers=[],hiddenPolygons=[],hiddenBoundaries=[];
-    try{if(Array.isArray(markers))markers.forEach(m=>{try{const a=m&&m.marker?m.marker:m;if(a&&typeof a.getMap==='function'&&a.getMap()){hiddenMarkers.push(a);a.setMap(null);}}catch(e){}});}catch(e){}
-    try{if(Array.isArray(polygons))polygons.forEach(p=>{try{if(p&&p.getMap&&p.getMap()){hiddenPolygons.push(p);p.setMap(null);}}catch(e){}});}catch(e){}
-    try{if(Array.isArray(urbanBoundaryPolygons))urbanBoundaryPolygons.forEach(p=>{try{if(p&&p.getMap&&p.getMap()){hiddenBoundaries.push(p);p.setMap(null);}}catch(e){}});}catch(e){}
-    const marker=new google.maps.Marker({position:new google.maps.LatLng(order.point.lat,order.point.lng),map:map,clickable:false,icon:{path:google.maps.SymbolPath.CIRCLE,scale:6,fillColor:'#ff0000',fillOpacity:1,strokeWeight:0}});
-    map.setCenter(new google.maps.LatLng(order.point.lat,order.point.lng));
-
-    // NEW: zoom computed so the visible ground width is ~150m (acts as the
-    // "capture altitude") instead of a fixed zoom level of 19.
-    const mapDiv=document.getElementById('map');
-    const pxWidth=(mapDiv&&mapDiv.clientWidth)?mapDiv.clientWidth:1200;
-    map.setZoom(zoomForGroundWidthMeters(order.point.lat,150,pxWidth));
-
-    try{if(order.elevation!==undefined&&order.elevation!==null)showFloatingBadge(order.point,`${formatNumberValue(order.elevation)}:المنسوب`,0);}catch(e){}
-    waitForMapReady(map).then(()=>{
-        setTimeout(async()=>{
-            if(shouldCancel){try{marker.setMap(null);if(prevCenter)map.setCenter(prevCenter);if(prevZoom)map.setZoom(prevZoom);hiddenMarkers.forEach(m=>m.setMap(map));hiddenPolygons.forEach(p=>p.setMap(map));hiddenBoundaries.forEach(p=>p.setMap(map));}catch(e){}callback(false,null);return;}
-            try{await waitForBadgeRendered(1200);}catch(e){}
-            html2canvas(document.getElementById('map'),{useCORS:true,scale:2,backgroundColor:'#ffffff',logging:false,imageTimeout:5000}).then(canvas=>{
-                try{removeFloatingBadge();}catch(e){}
-                const cropped=cropCanvasToContent(canvas);
-                cropped.toBlob(async function(blob){
-                    try{const fn=`${order.id}.jpg`;const dataUrl=cropped.toDataURL('image/jpeg',0.92);await saveBlobToFile(fn,blob,folderHandle);marker.setMap(null);if(prevCenter)map.setCenter(prevCenter);if(prevZoom)map.setZoom(prevZoom);try{hiddenMarkers.forEach(m=>m.setMap(map));hiddenPolygons.forEach(p=>p.setMap(map));hiddenBoundaries.forEach(p=>p.setMap(map));}catch(e){}callback(true,dataUrl);}catch(err){marker.setMap(null);if(prevCenter)map.setCenter(prevCenter);if(prevZoom)map.setZoom(prevZoom);try{hiddenMarkers.forEach(m=>m.setMap(map));hiddenPolygons.forEach(p=>p.setMap(map));hiddenBoundaries.forEach(p=>p.setMap(map));}catch(e){}callback(false,null);}
-                },'image/jpeg',0.92);
-            }).catch(err=>{console.error(err);marker.setMap(null);if(prevCenter)map.setCenter(prevCenter);if(prevZoom)map.setZoom(prevZoom);try{hiddenMarkers.forEach(m=>m.setMap(map));hiddenPolygons.forEach(p=>p.setMap(map));hiddenBoundaries.forEach(p=>p.setMap(map));}catch(e){}callback(false,null);});
-        },700);
-    }).catch(()=>{marker.setMap(null);if(prevCenter)map.setCenter(prevCenter);if(prevZoom)map.setZoom(prevZoom);callback(false,null);});
+    captureViaPopup(order,folderHandle,callback);
 }
 function captureHtml2Canvas(order,folderHandle,callback){
-    if(shouldCancel||!mapInitialized||!map){callback(false,null);return;}
-    const prevPolygons=polygons.slice();prevPolygons.forEach(p=>p.setMap(null));
-    const path=order.coords.map(c=>new google.maps.LatLng(c.lat,c.lng));
-    const tempPolygon=new google.maps.Polygon({paths:path,strokeColor:'#4285F4',strokeOpacity:0.9,strokeWeight:4,fillColor:'#4285F4',fillOpacity:0.3});
-    tempPolygon.setMap(map);
-    const bounds=new google.maps.LatLngBounds();path.forEach(p=>bounds.extend(p));
-    map.fitBounds(bounds);map.setCenter(bounds.getCenter());map.setZoom(calculateOptimalZoom(bounds));
-    waitForMapReady(map).then(()=>{
-        setTimeout(async()=>{
-            if(shouldCancel){try{prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);}catch(e){}callback(false,null);return;}
-            try{if(order.isElevation&&order.elevation!==undefined&&order.elevation!==null)showFloatingBadge(order.point||{lat:bounds.getCenter().lat(),lng:bounds.getCenter().lng()},`${formatNumberValue(order.elevation)}:المنسوب`,0);}catch(e){}
-            try{await waitForBadgeRendered(1200);}catch(e){}
-            await new Promise(r=>setTimeout(r,250));
-            html2canvas(document.getElementById('map'),{useCORS:true,scale:3,backgroundColor:'#ffffff',allowTaint:true,logging:false,imageTimeout:5000}).then(canvas=>{
-                try{removeFloatingBadge();}catch(e){}
-                const croppedCanvas=cropCanvasToContent(canvas);
-                croppedCanvas.toBlob(async function(blob){
-                    try{if(shouldCancel){try{prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);}catch(e){}callback(false,null);return;}
-                    const fn=`${order.id}.jpg`;const base64data=croppedCanvas.toDataURL('image/jpeg',0.92);await saveBlobToFile(fn,blob,folderHandle);prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);callback(true,base64data);}catch(err){console.error(err);prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);callback(false,null);}
-                },'image/jpeg',0.92);
-            }).catch(err=>{console.error(err);prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);callback(false,null);});
-        },800);
-    }).catch(()=>{prevPolygons.forEach(p=>p.setMap(map));tempPolygon.setMap(null);callback(false,null);});
+    captureViaPopup(order,folderHandle,callback);
+}
+
+function captureViaPopup(order,folderHandle,callback){
+    if(shouldCancel){callback(false,null);return;}
+
+    const cbKey='cb_'+order.id+'_'+Date.now();
+    window._popupCallbacks=window._popupCallbacks||{};
+    window._popupCallbacks[cbKey]={callback,folderHandle,order};
+
+    window['_popupDone_'+cbKey]=async function(dataUrl){
+        delete window['_popupDone_'+cbKey];
+        delete window['_popupFail_'+cbKey];
+        const entry=window._popupCallbacks[cbKey];
+        if(!entry)return;
+        delete window._popupCallbacks[cbKey];
+        try{
+            const r=await fetch(dataUrl);
+            const blob=await r.blob();
+            await saveBlobToFile(entry.order.id+'.jpg',blob,entry.folderHandle);
+            entry.callback(true,dataUrl);
+        }catch(e){entry.callback(false,null);}
+    };
+    window['_popupFail_'+cbKey]=function(){
+        delete window['_popupDone_'+cbKey];
+        delete window['_popupFail_'+cbKey];
+        const entry=window._popupCallbacks[cbKey];
+        if(!entry)return;
+        delete window._popupCallbacks[cbKey];
+        entry.callback(false,null);
+    };
+
+    let elevZoom=20;
+    if(order.isElevation&&order.point){
+        const lat=order.point.lat;
+        const mpp=156543.03392*Math.cos(lat*Math.PI/180);
+        elevZoom=Math.max(1,Math.min(21,Math.round(Math.log2((800*mpp)/150))));
+    }
+
+    let polyCenter={lat:0,lng:0},polyZoom=19;
+    if(order.coords&&order.coords.length>=3){
+        let minLat=Infinity,maxLat=-Infinity,minLng=Infinity,maxLng=-Infinity;
+        order.coords.forEach(c=>{
+            if(c.lat<minLat)minLat=c.lat;if(c.lat>maxLat)maxLat=c.lat;
+            if(c.lng<minLng)minLng=c.lng;if(c.lng>maxLng)maxLng=c.lng;
+        });
+        polyCenter={lat:(minLat+maxLat)/2,lng:(minLng+maxLng)/2};
+        const d=Math.max(maxLat-minLat,maxLng-minLng);
+        let z=20;if(d>10)z=6;else if(d>5)z=8;else if(d>2)z=10;else if(d>1)z=12;
+        else if(d>0.5)z=14;else if(d>0.2)z=16;else if(d>0.05)z=18;
+        polyZoom=Math.min(z+2,21);
+    }
+
+    const elevBadge=(order.isElevation&&order.elevation!==null&&order.elevation!==undefined)
+        ?`<div id="badge" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-140%);background:#1e88e5;color:#fff;border-radius:6px;font-weight:800;font-size:20px;padding:6px 16px;z-index:9999;white-space:nowrap;font-family:Tahoma,sans-serif;">المنسوب: ${typeof order.elevation==='number'?order.elevation.toFixed(3):order.elevation}</div>`
+        :'';
+
+    const coordsJson=JSON.stringify(order.coords||null);
+    const pointJson=JSON.stringify(order.point||null);
+    const isElev=order.isElevation?'true':'false';
+
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;}body,html{width:800px;height:800px;overflow:hidden;}#map{width:800px;height:800px;position:absolute;top:0;left:0;}</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+</head><body>
+<div id="map"></div>${elevBadge}
+<script>
+var COORDS=${coordsJson};
+var POINT=${pointJson};
+var IS_ELEV=${isElev};
+var POLY_CENTER=${JSON.stringify(polyCenter)};
+var POLY_ZOOM=${polyZoom};
+var ELEV_ZOOM=${elevZoom};
+var CB_KEY="${cbKey}";
+function initMap(){
+    var mapDiv=document.getElementById('map');
+    var map=new google.maps.Map(mapDiv,{zoom:6,center:{lat:26.8,lng:30.8},mapTypeId:'satellite',disableDefaultUI:true,gestureHandling:'none'});
+    if(COORDS&&COORDS.length>=3){
+        var path=COORDS.map(function(c){return new google.maps.LatLng(c.lat,c.lng);});
+        new google.maps.Polygon({paths:path,strokeColor:'#4285F4',strokeOpacity:0.9,strokeWeight:4,fillColor:'#4285F4',fillOpacity:0.3,map:map});
+        map.setCenter(new google.maps.LatLng(POLY_CENTER.lat,POLY_CENTER.lng));
+        map.setZoom(POLY_ZOOM);
+    }else if(POINT){
+        map.setCenter(new google.maps.LatLng(POINT.lat,POINT.lng));
+        map.setZoom(ELEV_ZOOM);
+        new google.maps.Marker({position:new google.maps.LatLng(POINT.lat,POINT.lng),map:map,icon:{path:google.maps.SymbolPath.CIRCLE,scale:6,fillColor:'#ff0000',fillOpacity:1,strokeWeight:0}});
+    }
+    var done=false;
+    function capture(){
+        if(done)return;done=true;
+        setTimeout(function(){
+            html2canvas(document.body,{useCORS:true,scale:2,backgroundColor:'#fff',logging:false,imageTimeout:8000,width:800,height:800}).then(function(canvas){
+                var dataUrl=canvas.toDataURL('image/jpeg',0.92);
+                try{window.opener['_popupDone_'+CB_KEY](dataUrl);}catch(e){
+                    try{window.opener.postMessage({type:'POPUP_DONE',cbKey:CB_KEY,dataUrl:dataUrl},'*');}catch(e2){}
+                }
+                window.close();
+            }).catch(function(){
+                try{window.opener['_popupFail_'+CB_KEY]();}catch(e){}
+                window.close();
+            });
+        },900);
+    }
+    google.maps.event.addListenerOnce(map,'tilesloaded',capture);
+    setTimeout(capture,12000);
+}
+<\/script>
+<script src="https://maps.googleapis.com/maps/api/js?key=${currentApiKey}&libraries=geometry&callback=initMap" async defer><\/script>
+</body></html>`;
+
+    const blob=new Blob([html],{type:'text/html'});
+    const blobUrl=URL.createObjectURL(blob);
+    const popup=window.open(blobUrl,'_blank','width=820,height=820,left=100,top=100,menubar=no,toolbar=no,location=no,status=no,resizable=no');
+
+    if(!popup||popup.closed){
+        delete window['_popupDone_'+cbKey];
+        delete window['_popupFail_'+cbKey];
+        delete (window._popupCallbacks||{})[cbKey];
+        URL.revokeObjectURL(blobUrl);
+        console.warn('Popup blocked for',order.id,', falling back');
+        callback(false,null);
+        return;
+    }
+
+    const msgHandler=(ev)=>{
+        if(!ev.data||ev.data.cbKey!==cbKey)return;
+        window.removeEventListener('message',msgHandler);
+        URL.revokeObjectURL(blobUrl);
+        if(ev.data.type==='POPUP_DONE'&&ev.data.dataUrl){
+            window['_popupDone_'+cbKey]&&window['_popupDone_'+cbKey](ev.data.dataUrl);
+        }else{
+            window['_popupFail_'+cbKey]&&window['_popupFail_'+cbKey]();
+        }
+    };
+    window.addEventListener('message',msgHandler);
+
+    setTimeout(()=>{
+        window.removeEventListener('message',msgHandler);
+        delete window['_popupDone_'+cbKey];
+        delete window['_popupFail_'+cbKey];
+        const entry=(window._popupCallbacks||{})[cbKey];
+        if(entry){delete window._popupCallbacks[cbKey];entry.callback(false,null);}
+        URL.revokeObjectURL(blobUrl);
+        try{if(popup&&!popup.closed)popup.close();}catch(e){}
+    },30000);
 }
 function exportImagesExcel(imagesData,folderHandle){
     if(!imagesData||!imagesData.length)return;
@@ -1544,7 +1858,20 @@ function exportExcel(){
 // ============================================================
 // 18. SAVE HANDLERS
 // ============================================================
-function selectImageDestination(callback){if(typeof callback!=='function')return;if(window.showDirectoryPicker)window.showDirectoryPicker().then(dir=>callback(dir)).catch(err=>{if(err&&err.name==='AbortError')callback({cancelled:true});else callback(null);});else callback(null);}
+function selectImageDestination(callback){
+    if(typeof callback!=='function')return;
+    if(window.showDirectoryPicker){
+        window.showDirectoryPicker({mode:'readwrite'})
+            .then(async dir=>{
+                const ok=await ensureWritePermission(dir);
+                if(!ok){alert('⚠️ لم يتم منح صلاحية الكتابة على المجلد، سيتم تنزيل الصور تلقائيًا بدلاً من ذلك');callback(null);return;}
+                callback(dir);
+            })
+            .catch(err=>{if(err&&err.name==='AbortError')callback({cancelled:true});else callback(null);});
+    }else{
+        callback(null);
+    }
+}
 function closeSaveModal(){saveCallback=null;document.getElementById('saveModal').classList.remove('open');}
 function selectFolder(){selectImageDestination(saveCallback);}
 function confirmSave(){if(typeof saveCallback==='function')saveCallback(null);closeSaveModal();}
@@ -1627,8 +1954,8 @@ function initPanelResizer(){
     const sidebar=document.getElementById('sidebarPanel');
     if(!resizer||!layout||!sidebar)return;
 
-    const MIN_SIDEBAR=320;   // smallest the table/buttons area can get
-    const MIN_MAP=160;       // smallest the map can get
+    const MIN_SIDEBAR=320;
+    const MIN_MAP=160;
     let dragging=false,sidebarOnRightSide=true;
 
     function getLayoutWidth(){return layout.getBoundingClientRect().width;}
@@ -1649,9 +1976,6 @@ function initPanelResizer(){
 
     function onPointerDown(e){
         dragging=true;
-        // Determine, from real on-screen geometry, which side the sidebar is
-        // currently painted on. We re-derive this fresh every drag start so
-        // it always matches whatever the browser actually rendered.
         const layoutRect=layout.getBoundingClientRect();
         const sidebarRect=sidebar.getBoundingClientRect();
         const sidebarCenter=sidebarRect.left+sidebarRect.width/2;
@@ -1665,21 +1989,13 @@ function initPanelResizer(){
         if(!dragging)return;
         const clientX=(e.touches?e.touches[0].clientX:e.clientX);
         const layoutRect=layout.getBoundingClientRect();
-        // Compute the sidebar width DIRECTLY from the mouse's current
-        // position relative to the layout's fixed edges — no delta, no
-        // assumed sign, no dependency on where the drag started. This is
-        // the actual physical distance from the mouse to whichever edge
-        // the sidebar is anchored to, so it can never come out reversed.
         let newWidth;
         if(sidebarOnRightSide){
-            // sidebar fills from the layout's right edge inward to the mouse
             newWidth=layoutRect.right-clientX;
         }else{
-            // sidebar fills from the layout's left edge inward to the mouse
             newWidth=clientX-layoutRect.left;
         }
         setSidebarWidth(newWidth);
-        // Trigger map resize while dragging so tiles/redraw keep up visually
         if(mapInitialized&&map&&google&&google.maps){
             try{google.maps.event.trigger(map,'resize');}catch(e){}
         }
@@ -1702,14 +2018,12 @@ function initPanelResizer(){
     window.addEventListener('touchmove',onPointerMove,{passive:false});
     window.addEventListener('touchend',onPointerUp);
 
-    // Double-click resizer to reset to default width
     resizer.addEventListener('dblclick',function(){
         document.documentElement.style.setProperty('--sidebar-w','760px');
         try{localStorage.setItem('sidebarWidthPx','760');}catch(e){}
         if(mapInitialized&&map&&google&&google.maps){try{google.maps.event.trigger(map,'resize');}catch(e){}}
     });
 
-    // Restore saved width
     try{
         const saved=localStorage.getItem('sidebarWidthPx');
         if(saved){
@@ -1718,7 +2032,6 @@ function initPanelResizer(){
         }
     }catch(e){}
 
-    // Keep things sane on window resize
     window.addEventListener('resize',function(){
         const current=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'))||760;
         setSidebarWidth(current);
@@ -1744,7 +2057,6 @@ document.addEventListener('DOMContentLoaded',function(){
 window.addEventListener('beforeunload',function(e){if(orders&&orders.length>0){e.preventDefault();e.returnValue='⚠️ بيانات غير محفوظة';return e.returnValue;}});
 window.addEventListener('visibilitychange',function(){if(document.hidden){needsMapRefresh=true;}else if(needsMapRefresh&&mapInitialized&&map){google.maps.event.trigger(map,'resize');if(orders&&orders.length>0)renderMap();needsMapRefresh=false;}});
 window.initMap=initMap;
-// Close modals on backdrop click
 document.addEventListener('click',function(event){if(event.target.classList.contains('modal')&&!event.target.closest('.modal-box')){if(isExtracting&&event.target.id==='progressModal'){ensureExtractionWindowActive();return;}event.target.classList.remove('open');}});
 </script>
 </body>
