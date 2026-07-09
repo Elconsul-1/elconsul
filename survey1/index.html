@@ -1316,16 +1316,9 @@ function updateDashboardClock() {
 }
 function formatDashboardDateTime(value) {
   if (!value) return '-';
-  const date = value instanceof Date ? value : new Date(value);
-  if (isNaN(date.getTime())) return '-';
-  const egypt = toEgyptTime(date);
-  if (!egypt) return '-';
-  const hour = egypt.getHours();
-  const minute = egypt.getMinutes().toString().padStart(2, '0');
-  const day = egypt.getDate();
-  const month = egypt.getMonth() + 1;
-  const year = egypt.getFullYear();
-  return `${hour}.${minute} ${day}/${month}/${year}`;
+  const p = egyptParts(value);
+  if (!p) return '-';
+  return `${p.hour}.${p.minute.toString().padStart(2, '0')} ${p.day}/${p.month}/${p.year}`;
 }
 function listBars(arr) {
   if (!arr || !arr.length) return `<div class="empty-state"><div class="ic">📭</div>لا توجد بيانات كافية بعد</div>`;
@@ -1561,18 +1554,16 @@ async function renderAttendance(root) {
   setInterval(() => {
     const c = document.getElementById('clockNow');
     if (c) c.textContent = getEgyptNow().toLocaleTimeString('ar-EG');
-    // إعادة رسم الصفحة تلقائيًا لحظة تجاوز الساعة 10 صباحًا حتى تختفي أزرار الحضور فورًا دون الحاجة لتحديث يدوي
-    if (!isAbsentToday && !checkedInToday && (getEgyptNow().getHours() * 60 + getEgyptNow().getMinutes()) >= attendanceCutoffMinutes && currentPage === 'attendance') {
+    // إعادة رسم الصفحة تلقائيًا لحظة تجاوز موعد اعتبار الغياب حتى تتحدث رسالة التنبيه فورًا دون الحاجة لتحديث يدوي
+    if (!willBeCountedAbsent && !checkedInToday && (getEgyptNow().getHours() * 60 + getEgyptNow().getMinutes()) >= attendanceCutoffMinutes && currentPage === 'attendance') {
       goPage('attendance', true);
     }
   }, 1000);
-  if (!isAbsentToday) {
-    document.getElementById('checkInBtn').onclick = () => doAttendanceWithModal();
-    if (isFieldRole) {
-      document.getElementById('checkOutBtn').onclick = () => doCheckoutWithModal();
-    } else {
-      document.getElementById('checkOutBtn').onclick = () => doAttendance('checkOut');
-    }
+  document.getElementById('checkInBtn').onclick = () => doAttendanceWithModal();
+  if (isFieldRole) {
+    document.getElementById('checkOutBtn').onclick = () => doCheckoutWithModal();
+  } else {
+    document.getElementById('checkOutBtn').onclick = () => doAttendance('checkOut');
   }
   // ربط أزرار إجراءات المتابعة السريعة (مدير المركز فقط): ضغطة واحدة، تتحول للأخضر، وتعرض وقت التسجيل
   if (isCenterAdmin) {
@@ -3644,6 +3635,7 @@ function parseEgyptTimeParts(dateValue) {
   if (!result.year) return null;
   return result;
 }
+// تُستخدم فقط لتحويل لحظة زمنية حقيقية (new Date() الفعلية من جهاز المستخدم) إلى توقيت القاهرة.
 function toEgyptTime(dateValue) {
   const parts = parseEgyptTimeParts(dateValue);
   if (!parts) return null;
@@ -3651,6 +3643,24 @@ function toEgyptTime(dateValue) {
 }
 function getEgyptNow() {
   return toEgyptTime(new Date()) || new Date();
+}
+// القيم القادمة من الخادم (Attendance/Missions/... إلخ) مُخزَّنة بالفعل كأرقام توقيت القاهرة
+// المحلي (حتى وإن انتهت بحرف Z في صيغة ISO) - وأي كائن Date ناتج عن getEgyptNow() يحمل بالفعل
+// قيم القاهرة في حقوله العادية. لذلك عند العرض يجب قراءة هذه القيم مباشرة بدون أي تحويل توقيت
+// إضافي، وإلا سيتكرر إضافة فارق التوقيت مرتين ويظهر الوقت بعد ساعتين من الوقت الحقيقي.
+function egyptParts(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return {
+      year: value.getFullYear(), month: value.getMonth() + 1, day: value.getDate(),
+      hour: value.getHours(), minute: value.getMinutes(), second: value.getSeconds()
+    };
+  }
+  const str = String(value);
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return { year: +m[1], month: +m[2], day: +m[3], hour: +m[4], minute: +m[5], second: +m[6] };
 }
 function getEgyptDateKey(value) {
   const d = value instanceof Date ? value : new Date(value);
@@ -3661,26 +3671,15 @@ function getEgyptDateKey(value) {
 }
 function fmtDate(iso) {
   if (!iso) return '-';
-  const d = iso instanceof Date ? iso : new Date(iso);
-  if (Number.isNaN(d.getTime())) return '-';
-  const egypt = toEgyptTime(d);
-  if (!egypt) return '-';
-  const hour = egypt.getHours();
-  const minute = egypt.getMinutes().toString().padStart(2, '0');
-  const day = egypt.getDate();
-  const month = egypt.getMonth() + 1;
-  const year = egypt.getFullYear();
-  return `${hour}.${minute} ${day}/${month}/${year}`;
+  const p = egyptParts(iso);
+  if (!p) return '-';
+  return `${p.hour}.${p.minute.toString().padStart(2, '0')} ${p.day}/${p.month}/${p.year}`;
 }
 function fmtTime(iso) {
   if (!iso) return '';
-  const d = iso instanceof Date ? iso : new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const egypt = toEgyptTime(d);
-  if (!egypt) return '';
-  const hour = egypt.getHours();
-  const minute = egypt.getMinutes().toString().padStart(2, '0');
-  return `${hour}.${minute}`;
+  const p = egyptParts(iso);
+  if (!p) return '';
+  return `${p.hour}.${p.minute.toString().padStart(2, '0')}`;
 }
 function parseTimeToMinutes(timeStr) {
   if (!timeStr || typeof timeStr !== 'string') return null;
@@ -3702,9 +3701,8 @@ function getAttendanceWindowState(nowDate) {
   // تسجيل الحضور والانصراف مفتوح دائمًا؛ لا يوجد إغلاق بعد أي وقت.
   // الاستخدام الوحيد للوقت هنا هو تحديد ما إذا كان الوقت الحالي بعد موعد اعتبار الغياب.
   const config = window.__attendanceWindowConfig || { startTime: '10:00' };
-  const now = nowDate instanceof Date ? nowDate : new Date(nowDate);
-  const egyptNow = toEgyptTime(now);
-  const currentMinutes = egyptNow.getHours() * 60 + egyptNow.getMinutes();
+  const p = egyptParts(nowDate instanceof Date ? nowDate : new Date(nowDate));
+  const currentMinutes = p ? (p.hour * 60 + p.minute) : 0;
   const checkInDeadline = parseTimeToMinutes(config.startTime) ?? 10 * 60;
   const isLate = currentMinutes >= checkInDeadline;
   return {
