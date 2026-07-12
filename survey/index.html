@@ -1574,15 +1574,21 @@ function showPage(name, opts = {}) {
   
   // تحميل البيانات (التحميل الخلفي مع استخدام الكاش إن وجد)
 if (name === 'sessions') sessLoad();
-  if (name === 'hafez-admin') { hBuildAllocMatrix(); hLoadAdminData(); }
+  if (name === 'hafez-admin') {
+    if (!document.getElementById('hAdminMonthSel')?.options.length) hBuildMonthSelect('hAdminMonthSel', hCurMonthStr());
+    hBuildAllocMatrix();
+    hLoadAdminData();
+  }
   if (name === 'hafez-history') { 
     if (!hHistAllData || Object.keys(hHistAllData).length === 0) hBuildHistory(); else hRenderHistPivot(); 
   }
   if (name === 'activity-log') loadActivityLog(false);
   if (name === 'user-mgmt') loadUserMgmt();
   if (name === 'hafez-employees') hLoadAllEmps();
-  if (name === 'hafez-center')    hLoadCenterData();
-}
+  if (name === 'hafez-center') {
+    if (!document.getElementById('hCenterMonthSel')?.options.length) hBuildMonthSelect('hCenterMonthSel', hCurMonthStr());
+    hLoadCenterData();
+  }
 
 function updateDashboardGreeting(){
   const el = document.getElementById('dashboardGreeting');
@@ -2705,6 +2711,7 @@ function hEnableAllocEditing(en){
 
 async function hLoadAdminData(force=false){
   if(!document.getElementById('hAllocBody')?.children.length) hBuildAllocMatrix(); // <-- السطر الجديد
+  if(!document.getElementById('hAdminMonthSel')?.options.length) hBuildMonthSelect('hAdminMonthSel', hCurMonthStr()); // <-- السطر الجديد
   const month=document.getElementById('hAdminMonthSel')?.value||hCurMonthStr();
   const title=document.getElementById('hAllocMonthTitle');if(title)title.textContent=hFmtMonth(month);
   hShowLoading();
