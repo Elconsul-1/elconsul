@@ -17,20 +17,6 @@
   --purple:#6b4b85;--teal:#17807b;
   --bg:#f3f6f9;--white:#fff;--shadow:0 8px 25px rgba(0,0,0,0.08);
 }
-// show welcome modal once per session after login
-function showWelcomeIfNeeded(){
-  try{
-    if(sessionStorage.getItem('seenWelcome')) return;
-    sessionStorage.setItem('seenWelcome','1');
-    const el=document.getElementById('welcomeModal');
-    if(!el) return;
-    const name=currentUser?.name||'المستخدم';
-    const greetings=['صباح الخير','صباح النور','مرحباً بيك','تشرفت'];
-    const greeting=greetings[Math.floor(Math.random()*greetings.length)];
-    document.getElementById('welcomeGreeting').textContent=`${greeting} ${name}! 👋`;
-    el.style.display='flex';
-  }catch(e){}
-}
 #loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#0f2b4d,#1a3a6e,#0f2b4d);display:flex;align-items:center;justify-content:center;z-index:9999;}
 
 /* شريط التقدم العلوي */
@@ -1198,16 +1184,29 @@ function showWelcomeIfNeeded(){
       <div style="font-size:18px;font-weight:900;margin-bottom:8px" id="welcomeGreeting">أهلاً بك</div>
       <div style="margin-bottom:12px;color:#64748b">صباحك فل — اختر القسم للبدء بسرعة</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-        <button class="h-btn" onclick="document.getElementById('welcomeModal').style.display='none';showPage('search')">🔍 البحث</button>
+        <button class="h-btn" onclick="document.getElementById('welcomeModal').style.display='none';showPage('search')">🔍 البحث عن شهادات</button>
+        <button class="h-btn" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-search')">🔍 بحث الحافز</button>
+
+        <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('survey')">🗺️ تسليم الرفع المساحي</button>
+        <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('leveling')">📐 تسليم المنسوب</button>
+        <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('survey-review')">🔍 مراجعة الطلبات</button>
         <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('collection')">📥 جمع التقارير</button>
         <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('upload')">📤 رفع التقارير</button>
         <button class="h-btn admin-office-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('finish')">✅ إنهاء التكنولوجي</button>
-        <button class="h-btn center-hafez-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-center')">💰 الحافز</button>
+
+        <button class="h-btn center-hafez-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-center')">💰 كشف الحافز</button>
+
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-admin')">⚙️ إدارة الحافز</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-history')">📅 السجل التاريخي</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('hafez-employees')">👥 موظفو الحافز</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('activity-log')">📝 سجل النشاطات</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('user-mgmt')">👤 إدارة المستخدمين</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('sessions')">👥 تسجيلات الدخول</button>
+        <button class="h-btn admin-only" onclick="document.getElementById('welcomeModal').style.display='none';showPage('elconsul-tools')">🔧 أدوات القنصل</button>
       </div>
     </div>
   </div>
-</div>
-<div id="colReportTypeModal" class="modal-overlay">
+</div><div id="colReportTypeModal" class="modal-overlay">
   <div class="modal-box"><div style="font-size:40px;margin-bottom:10px">📊</div><h3>اختر نوع التقرير</h3><p>تقسيم الطلبات حسب المركز</p><div class="modal-btns"><button class="modal-btn survey" onclick="colSplitByCenter('survey')">📐 رفع مساحي</button><button class="modal-btn leveling" onclick="colSplitByCenter('leveling')">⚖️ منسوب</button><button class="modal-btn cancel" onclick="document.getElementById('colReportTypeModal').classList.remove('show')">✕ إلغاء</button></div></div>
 </div>
 
@@ -1288,6 +1287,7 @@ let hHistAllData={},hHistYearFilter='all';
 let hAllocData={};
 let hExpandedYears=new Set();
 const HC={emps:null,empMap:{},byCenter:{},allocs:{},sheets:{},details:{}};
+let hAttCounts = {};
 
 let hAllEmployeesMaster=[];
 let hSearchTimeout=null;
@@ -1405,7 +1405,6 @@ function doLogin() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     
-    // تسجيل عملية الدخول في السجل
     setTimeout(() => logUserActivity('login', 'قام بتسجيل الدخول للمنظومة'), 100);
 
     document.getElementById('userDisplay').textContent = currentUser.name;
@@ -1419,18 +1418,20 @@ function doLogin() {
     if (currentUser.role === 'admin' || currentUser.role === 'office') { svInit(); lvInit(); }
     sessHeartbeat();
     showWelcomeIfNeeded();
-    startGlobalBackgroundLoad(); // بدء تحميل البيانات في الخلفية
+    startGlobalBackgroundLoad();
     if (window.sessHeartbeatTimer) clearInterval(window.sessHeartbeatTimer);
     window.sessHeartbeatTimer = setInterval(sessHeartbeat, 60000);
     sessLoadActiveCount();
+    
+// 🔴 استدعاء hInitSystem
     hInitSystem();
+    
     showToast('✅ مرحباً ' + currentUser.name, 'success');
   } else {
     err.style.display = 'block';
     setTimeout(() => err.style.display = 'none', 3000);
   }
 }
-
 function doLogout() {
   if (currentUser && !confirm(APP_EXIT_WARNING)) return;
   if (window.sessHeartbeatTimer) clearInterval(window.sessHeartbeatTimer);
@@ -1598,8 +1599,17 @@ function updateDashboardGreeting(){
 
 // دالات التحميل في الخلفية والـ Caching
 function hAllMonthsUntilNow(){
-  const today=new Date();const cy=today.getFullYear();const cm=today.getMonth()+1;const months=[];
-  for(let y=2024;y<=cy;y++){const endM=(y===cy)?cm:12;for(let mo=1;mo<=endM;mo++)months.push(`${y}-${String(mo).padStart(2,'0')}`);}
+  const today = new Date();
+  const cy = today.getFullYear();
+  const cm = today.getMonth() + 1;
+  const months = [];
+
+  for(let y = 2024; y <= cy; y++){
+    const endM = (y === cy) ? cm : 12;
+    for(let mo = 1; mo <= endM; mo++){
+      months.push(`${y}-${String(mo).padStart(2, '0')}`);
+    }
+  }
   return months;
 }
 
@@ -2284,12 +2294,21 @@ function hHideLoading(){_hLoadCount=Math.max(0,_hLoadCount-1);if(_hLoadCount===0
 function hShowBusy(msg,sub){const o=document.getElementById('hBusyOverlay');if(!o)return;const m=document.getElementById('hBusyMsg');if(m)m.textContent=msg||'جاري المعالجة...';const s=document.getElementById('hBusySub');if(s)s.textContent=sub||'برجاء الانتظار';o.style.display='flex';}
 function hHideBusy(){const o=document.getElementById('hBusyOverlay');if(o)o.style.display='none';}
 async function hApiCall(action,params={}){try{const r=await fetch(H_API,{method:'POST',body:JSON.stringify({action,...params})});return await r.json();}catch(e){return{success:false,message:'خطأ في الاتصال: '+e.message};}}
-async function hLoadAttCounts(){
-  try{
+
+async function hLoadAttCounts() {
+  try {
     const r = await hApiCall('listAttachmentsCounts', {});
-    hAttCounts = (r && r.success && r.counts) ? r.counts : {};
-  }catch(e){ hAttCounts = {}; }
+    if (r && r.success && r.counts) {
+      hAttCounts = r.counts;
+    } else {
+      hAttCounts = {};
+    }
+  } catch(e) {
+    console.warn('⚠️ فشل تحميل عدد المرفقات:', e);
+    hAttCounts = {};
+  }
 }
+
 function hToast(m,t='info'){showToast(m,t);}
 function hOpenModal(id){document.getElementById(id)?.classList.add('active');}
 function hCloseModal(id){document.getElementById(id)?.classList.remove('active');}
@@ -2299,11 +2318,17 @@ function hBadgeCls(s){const m={مسودة:'draft',محفوظ:'draft','مرسل �
 function hCurMonthStr(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function hIsLocked(s){return H_LOCKED.includes(s);}
 function hNormAr(str){if(!str)return'';return str.toString().replace(/أ|إ|آ|ا/g,'ا').replace(/ة/g,'ه').replace(/ى|ي/g,'ي').replace(/\s+/g,'').replace(/[،,\.]/g,'').trim().toLowerCase();}
-function hFmtMonth(m){if(!m)return'';const n=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];const[y,mo]=m.split('-');const mn=parseInt(mo);if(isNaN(mn)||mn<1||mn>12)return m;return`${n[mn-1]} ${y}`;}
-function hClearMonthCache(month){
-  delete HC.sheets[month];delete HC.allocs[month];
-  const sheets=readCacheBucket(CACHE_KEYS.SHEETS);delete sheets[month];writeCacheBucket(CACHE_KEYS.SHEETS,sheets);
-  const allocs=readCacheBucket(CACHE_KEYS.ALLOCS);delete allocs[month];writeCacheBucket(CACHE_KEYS.ALLOCS,allocs);
+
+function hFmtMonth(m) {
+  if (!m) return '';
+  const n = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
+             'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const parts = m.split('-');
+  if (parts.length !== 2) return m;
+  const y = parts[0];
+  const mo = parseInt(parts[1]);
+  if (isNaN(mo) || mo < 1 || mo > 12) return m;
+  return `${n[mo - 1]} ${y}`;
 }
 function hClearSheetCache(sid){
   delete HC.details[sid];
@@ -2335,34 +2360,68 @@ async function hGetAllocs(month,force=false){
 }
 
 // بناء قائمة الأشهر
-function hBuildMonthSelect(selId,defaultM){
-  const sel=document.getElementById(selId);if(!sel)return;
-  const today=new Date();const cy=today.getFullYear();const cm=today.getMonth()+1;
-  let html='';
-  for(let y=2024;y<=cy;y++){const endM=(y===cy)?cm:12;for(let mo=1;mo<=endM;mo++){const k=`${y}-${String(mo).padStart(2,'0')}`;html+=`<option value="${k}"${k===defaultM?' selected':''}>${hFmtMonth(k)}</option>`;}}
-  sel.innerHTML=html||`<option value="${defaultM}">${hFmtMonth(defaultM)}</option>`;
+function hBuildMonthSelect(selId, defaultM) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const today = new Date();
+  const cy = today.getFullYear();
+  const cm = today.getMonth() + 1;
+  let html = '';
+  for (let y = 2024; y <= cy; y++) {
+    const endM = (y === cy) ? cm : 12;
+    for (let mo = 1; mo <= endM; mo++) {
+      const k = `${y}-${String(mo).padStart(2, '0')}`;
+      html += `<option value="${k}"${k === defaultM ? ' selected' : ''}>${hFmtMonth(k)}</option>`;
+    }
+  }
+  sel.innerHTML = html || `<option value="${defaultM}">${hFmtMonth(defaultM)}</option>`;
 }
+async function hInitSystem() {
+  console.log('🔄 تهيئة النظام...');
+  const curM = hCurMonthStr();
+  console.log('📅 الشهر الحالي:', curM);
+  
+  // بناء قائمة الأشهر في صفحة الإدارة
+  const adminSel = document.getElementById('hAdminMonthSel');
+  if (adminSel) {
+    console.log('✅ تم العثور على hAdminMonthSel');
+    hBuildMonthSelect('hAdminMonthSel', curM);
+  } else {
+    console.warn('⚠️ hAdminMonthSel غير موجود');
+  }
 
-// تهيئة النظام
-async function hInitSystem(){
-  const curM=hCurMonthStr();
-  if(document.getElementById('hCenterMonthSel'))hBuildMonthSelect('hCenterMonthSel',curM);
-  if(document.getElementById('hAdminMonthSel'))hBuildMonthSelect('hAdminMonthSel',curM);
-  ['hEmpCenter','hEmpFilterCenter'].forEach(id=>{
-    const el=document.getElementById(id);if(!el)return;
-    el.innerHTML=id==='hEmpFilterCenter'?'<option value="">كل المراكز</option>':'<option value="">-- اختر --</option>';
-    H_CENTERS.forEach(c=>el.innerHTML+=`<option value="${c}">${c}</option>`);
+  // بناء قائمة الأشهر في صفحة المركز
+  const centerSel = document.getElementById('hCenterMonthSel');
+  if (centerSel) {
+    console.log('✅ تم العثور على hCenterMonthSel');
+    hBuildMonthSelect('hCenterMonthSel', curM);
+  }
+
+  // بناء قائمة المراكز في الفلاتر
+  ['hEmpCenter', 'hEmpFilterCenter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = id === 'hEmpFilterCenter' ? '<option value="">كل المراكز</option>' : '<option value="">-- اختر --</option>';
+    H_CENTERS.forEach(c => el.innerHTML += `<option value="${c}">${c}</option>`);
   });
-  if(currentUser&&currentUser.role==='admin'){
-    hBuildAllocMatrix();
-    hLoadAdminData();
 
+  // بناء جدول المخصصات
+  console.log('🔄 بناء جدول المخصصات...');
+  hBuildAllocMatrix();
+
+  // تحميل البيانات حسب دور المستخدم
+  if (currentUser) {
+    console.log('👤 المستخدم:', currentUser.name, 'الدور:', currentUser.role);
+    if (currentUser.role === 'admin') {
+      await hLoadAdminData();
+    } else if (currentUser.role === 'center') {
+      await hLoadCenterData();
+      await hAutoSelectCenterMonth();
+    }
   }
-  if(currentUser&&currentUser.role==='center'){
-    await hLoadCenterData();
-    await hAutoSelectCenterMonth();
-  }
+
   hLoadAllEmps();
+  console.log('✅ تم تهيئة النظام بنجاح');
 }
 
 async function hAutoSelectCenterMonth(){
@@ -2681,68 +2740,157 @@ tfoot td{background:#e8f0fe;font-weight:900;font-size:11px;border-top:2px solid 
  
 // صفحة الإدارة — بناء جدول المخصصات
 function hBuildAllocMatrix(){
-  const head=document.getElementById('hAllocHead');if(!head)return;
-  head.innerHTML=`<tr><th style="min-width:65px">البيان</th>${H_CENTERS.map(c=>`<th style="min-width:85px;font-size:11px">${escapeHtml(c)}</th>`).join('')}</tr>`;
-  const body=document.getElementById('hAllocBody');if(!body)return;
-  body.innerHTML=`
-    <tr style="background:#eef4ff"><td style="font-weight:700;font-size:11px">بنية</td>${H_CENTERS.map(c=>`<td><input type="number" class="h-alloc-input" id="hInf_${c}" value="0" min="0" disabled onchange="hCalcCenter('${c}')" oninput="hCalcCenter('${c}')"></td>`).join('')}</tr>
-    <tr style="background:#fff8ee"><td style="font-weight:700;font-size:11px">أجهزة</td>${H_CENTERS.map(c=>`<td><input type="number" class="h-alloc-input" id="hSup_${c}" value="0" min="0" disabled onchange="hCalcCenter('${c}')" oninput="hCalcCenter('${c}')"></td>`).join('')}</tr>
-    <tr style="background:#f0fff4"><td style="font-weight:700;font-size:11px">💰 إجمالي</td>${H_CENTERS.map(c=>`<td><input type="number" class="h-alloc-input" id="hTot_${c}" value="0" min="0" disabled onchange="hAutoSplit('${c}')"></td>`).join('')}</tr>`;
+  const head = document.getElementById('hAllocHead');
+  const body = document.getElementById('hAllocBody');
+  if(!head || !body) {
+    console.warn('⚠️ عناصر الجدول غير موجودة في الصفحة');
+    return;
+  }
+
+  // بناء رأس الجدول
+  let headerHtml = `<tr><th style="min-width:65px;padding:8px;background:#1a3c5e;color:#fff;font-weight:700;">البيان</th>`;
+  H_CENTERS.forEach(c => {
+    headerHtml += `<th style="min-width:85px;font-size:11px;padding:8px;background:#1a3c5e;color:#fff;font-weight:700;">${escapeHtml(c)}</th>`;
+  });
+  headerHtml += `</tr>`;
+  head.innerHTML = headerHtml;
+
+  // بناء صفوف الجدول
+  let bodyHtml = `
+    <tr style="background:#eef4ff">
+      <td style="font-weight:700;font-size:11px;padding:6px;">🏗️ بنية</td>
+      ${H_CENTERS.map(c => `<td><input type="number" class="h-alloc-input" id="hInf_${c}" value="0" min="0" disabled onchange="hCalcCenter('${c}')" oninput="hCalcCenter('${c}')"></td>`).join('')}
+    </tr>
+    <tr style="background:#fff8ee">
+      <td style="font-weight:700;font-size:11px;padding:6px;">🖥️ أجهزة</td>
+      ${H_CENTERS.map(c => `<td><input type="number" class="h-alloc-input" id="hSup_${c}" value="0" min="0" disabled onchange="hCalcCenter('${c}')" oninput="hCalcCenter('${c}')"></td>`).join('')}
+    </tr>
+    <tr style="background:#f0fff4;font-weight:bold;">
+      <td style="font-weight:700;font-size:11px;padding:6px;">💰 إجمالي</td>
+      ${H_CENTERS.map(c => `<td><input type="number" class="h-alloc-input" id="hTot_${c}" value="0" min="0" disabled onchange="hAutoSplit('${c}')" style="background:#e8f5e9;font-weight:bold;"></td>`).join('')}
+    </tr>
+  `;
+  body.innerHTML = bodyHtml;
+  
+  console.log('✅ تم بناء جدول المخصصات بنجاح');
 }
 
 function hAutoSplit(c){const t=parseInt(document.getElementById(`hTot_${c}`)?.value)||0;const i=Math.floor(t*2/3);const s=t-i;const ii=document.getElementById(`hInf_${c}`);const si=document.getElementById(`hSup_${c}`);if(ii)ii.value=i;if(si)si.value=s;}
 function hCalcCenter(c){const t=parseInt(document.getElementById(`hTot_${c}`)?.value)||0;const i=parseInt(document.getElementById(`hInf_${c}`)?.value)||0;const s=parseInt(document.getElementById(`hSup_${c}`)?.value)||0;if(t>0&&(i+s)!==t){const ni=Math.floor(t*2/3);const ns=t-ni;const ii=document.getElementById(`hInf_${c}`);const si=document.getElementById(`hSup_${c}`);if(ii)ii.value=ni;if(si)si.value=ns;}}
+
 function hEnableAllocEditing(en){
-  hAllocEditing=en;
-  H_CENTERS.forEach(c=>{['hTot_','hInf_','hSup_'].forEach(p=>{const el=document.getElementById(`${p}${c}`);if(el)el.disabled=!en;});});
-  const saveBtn=document.getElementById('hAllocSaveBtn');if(saveBtn)saveBtn.disabled=!en;
-  const sendBtn=document.getElementById('hAllocSendBtn');if(sendBtn)sendBtn.disabled=!en;
-  const editBtn=document.getElementById('hAllocEditBtn');if(editBtn)editBtn.disabled=en;
-  const badge=document.getElementById('hAllocBadge');
-  if(badge){badge.textContent=en?'✏️ وضع التعديل':'🔒 محفوظ';badge.className=en?'h-badge h-badge-sent':'h-badge h-badge-approved';}
-  const ls=document.getElementById('hLastSaved');if(!en&&ls)ls.textContent=`آخر حفظ: ${new Date().toLocaleTimeString('ar-EG',{hour12:false})}`;
+  hAllocEditing = en;
+
+  H_CENTERS.forEach(c => {
+    ['hTot_', 'hInf_', 'hSup_'].forEach(p => {
+      const el = document.getElementById(`${p}${c}`);
+      if(el) el.disabled = !en;
+    });
+  });
+
+  const saveBtn = document.getElementById('hAllocSaveBtn');
+  const sendBtn = document.getElementById('hAllocSendBtn');
+  const editBtn = document.getElementById('hAllocEditBtn');
+  const badge = document.getElementById('hAllocBadge');
+
+  if(saveBtn) saveBtn.disabled = !en;
+  if(sendBtn) sendBtn.disabled = !en;
+  if(editBtn) editBtn.disabled = en;
+
+  if(badge){
+    badge.textContent = en ? '✏️ وضع التعديل' : '🔒 محفوظ';
+    badge.className = en ? 'h-badge h-badge-sent' : 'h-badge h-badge-approved';
+  }
+
+  const ls = document.getElementById('hLastSaved');
+  if(!en && ls) ls.textContent = `آخر حفظ: ${new Date().toLocaleTimeString('ar-EG', {hour12: false})}`;
 }
 
-async function hLoadAdminData(force=false){
-  const month=document.getElementById('hAdminMonthSel')?.value||hCurMonthStr();
-  const title=document.getElementById('hAllocMonthTitle');if(title)title.textContent=hFmtMonth(month);
+async function hLoadAdminData(force = false) {
+  // التأكد من وجود الجدول قبل التحميل
+  const head = document.getElementById('hAllocHead');
+  if (!head || !head.children.length) {
+    console.log('🔄 بناء جدول المخصصات...');
+    hBuildAllocMatrix();
+  }
+
+  const month = document.getElementById('hAdminMonthSel')?.value || hCurMonthStr();
+  const title = document.getElementById('hAllocMonthTitle');
+  if (title) title.textContent = hFmtMonth(month);
+
   hShowLoading();
-  await hLoadAttCounts();  // <-- أضف هذا السطر
-  const[allocArr,sheets]=await Promise.all([hGetAllocs(month,force),hGetSheets(month,force)]);
-  let grandTot=0;
-  H_CENTERS.forEach(c=>{
-    const a=(allocArr||[]).find(a=>a.center===c);
-    const tot=a?parseInt(a.total)||0:0;
-    const inf=a?parseInt(a.infra)||0:Math.floor(tot*2/3);
-    const sup=a?parseInt(a.support)||0:(tot-Math.floor(tot*2/3));
-    hAllocData[c]={tot,inf,sup};
-    const ti=document.getElementById(`hTot_${c}`);if(ti)ti.value=tot;
-    const ii=document.getElementById(`hInf_${c}`);if(ii)ii.value=inf;
-    const si=document.getElementById(`hSup_${c}`);if(si)si.value=sup;
-    grandTot+=tot;
-  });
-  const totalSheets=sheets?.length||0;
-  const approvedSheets=sheets?.filter(s=>['معتمد','إرسال نهائي','مغلق'].includes(s.status)).length||0;
-  const pendingSheets=sheets?.filter(s=>['مرسل للإدارة','قيد الفحص'].includes(s.status)).length||0;
-  const el1=document.getElementById('hStatTotalAlloc');if(el1)el1.textContent=hFmtN(grandTot);
-  const el2=document.getElementById('hStatTotalSheets');if(el2)el2.textContent=totalSheets;
-  const el3=document.getElementById('hStatApproved');if(el3)el3.textContent=approvedSheets;
-  const el4=document.getElementById('hStatPending');if(el4)el4.textContent=pendingSheets;
-  hRenderCentersTable(sheets||[]);
-  hEnableAllocEditing(false);
+  
+  try {
+    // تحميل عدد المرفقات أولاً
+    await hLoadAttCounts();
+    
+    // جلب المخصصات والكشوف
+    const [allocArr, sheets] = await Promise.all([
+      hGetAllocs(month, force),
+      hGetSheets(month, force)
+    ]);
+
+    let grandTot = 0;
+
+    // تعبئة الجدول بالبيانات
+    H_CENTERS.forEach(c => {
+      const a = (allocArr || []).find(a => a.center === c);
+      const tot = a ? parseInt(a.total) || 0 : 0;
+      const inf = a ? parseInt(a.infra) || 0 : Math.floor(tot * 2 / 3);
+      const sup = a ? parseInt(a.support) || 0 : (tot - Math.floor(tot * 2 / 3));
+
+      hAllocData[c] = { tot, inf, sup };
+
+      const ti = document.getElementById(`hTot_${c}`);
+      const ii = document.getElementById(`hInf_${c}`);
+      const si = document.getElementById(`hSup_${c}`);
+
+      if (ti) ti.value = tot;
+      if (ii) ii.value = inf;
+      if (si) si.value = sup;
+
+      grandTot += tot;
+    });
+
+    // تحديث الإحصائيات
+    const totalSheets = sheets?.length || 0;
+    const approvedSheets = sheets?.filter(s => ['معتمد', 'إرسال نهائي', 'مغلق'].includes(s.status)).length || 0;
+    const pendingSheets = sheets?.filter(s => ['مرسل للإدارة', 'قيد الفحص'].includes(s.status)).length || 0;
+
+    const el1 = document.getElementById('hStatTotalAlloc');
+    const el2 = document.getElementById('hStatTotalSheets');
+    const el3 = document.getElementById('hStatApproved');
+    const el4 = document.getElementById('hStatPending');
+
+    if (el1) el1.textContent = hFmtN(grandTot);
+    if (el2) el2.textContent = totalSheets;
+    if (el3) el3.textContent = approvedSheets;
+    if (el4) el4.textContent = pendingSheets;
+
+    // عرض الكشوف
+    hRenderCentersTable(sheets || []);
+
+    // قفل التعديل تلقائياً
+    hEnableAllocEditing(false);
+
+  } catch (error) {
+    console.error('❌ خطأ في تحميل البيانات:', error);
+    hToast('خطأ في تحميل البيانات: ' + error.message, 'error');
+  }
+
   hHideLoading();
 }
 
-
 // التعديل 1+2: بناء بطاقة الكشف — طباعة + حذف بيانات + إزالة تعديل
-function hBuildSheetCard(sheet,center,month,type,typeName,allocAmount){
-  const total=parseFloat(allocAmount)||0;
-  // التحقق من وجود مرفقات
+function hBuildSheetCard(sheet, center, month, type, typeName, allocAmount) {
+  const total = parseFloat(allocAmount) || 0;
+  
+  // التحقق من وجود مرفقات بشكل آمن
   const hasAttachments = (hAttCounts && hAttCounts[sheet?.sheetId] > 0);
   const attachBtnColor = hasAttachments ? '#22c55e' : '#94a3b8';
   
-  if(!sheet){
-    return`<div class="h-sheet-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px">
+  if (!sheet) {
+    return `<div class="h-sheet-card" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px">
       <div class="h-sheet-header" style="background:#f1f5f9;border-bottom:2px solid #cbd5e1;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
         <span style="font-weight:800;font-size:13px">${escapeHtml(typeName)}</span>
         <span class="h-status draft">📋 لم يُرسل</span>
@@ -2755,45 +2903,52 @@ function hBuildSheetCard(sheet,center,month,type,typeName,allocAmount){
       </div>
     </div>`;
   }
-  const status=sheet.status||'مسودة';
-  const distributed=parseFloat(sheet.distributed)||0;
-  const remaining=total-distributed;
-  const progressPercent=total>0?Math.min(100,(distributed/total)*100):0;
-  const canAppr=['مرسل للإدارة','قيد الفحص'].includes(status);
-  const isLock=['معتمد','إرسال نهائي','مغلق'].includes(status);
-  const statusMap={'معتمد':'approved','إرسال نهائي':'approved','مغلق':'approved','مرسل للإدارة':'sent','قيد الفحص':'sent','إعادة مراجعة':'returned'};
-  const sCls=statusMap[status]||'draft';
-  const sIcon={approved:'✅',sent:'📤',returned:'↩️',draft:'✏️'}[sCls];
-  const remColor=remaining>=0?'#16a34a':'#dc2626';
-  const remPfx=remaining<0?'-':'';
-  const remAbs=Math.abs(remaining);
-  const progColor=distributed>=total?'#22c55e':distributed>0?'#eab308':'#cbd5e1';
-  const esc_center=escapeHtml(center);const esc_type=escapeHtml(typeName);const sid=sheet.sheetId;
+  
+  const status = sheet.status || 'مسودة';
+  const distributed = parseFloat(sheet.distributed) || 0;
+  const remaining = total - distributed;
+  const progressPercent = total > 0 ? Math.min(100, (distributed / total) * 100) : 0;
+  const canAppr = ['مرسل للإدارة', 'قيد الفحص'].includes(status);
+  const statusMap = {
+    'معتمد': 'approved',
+    'إرسال نهائي': 'approved',
+    'مغلق': 'approved',
+    'مرسل للإدارة': 'sent',
+    'قيد الفحص': 'sent',
+    'إعادة مراجعة': 'returned'
+  };
+  const sCls = statusMap[status] || 'draft';
+  const sIcon = { approved: '✅', sent: '📤', returned: '↩️', draft: '✏️' }[sCls];
+  const remColor = remaining >= 0 ? '#16a34a' : '#dc2626';
+  const remPfx = remaining < 0 ? '-' : '';
+  const remAbs = Math.abs(remaining);
+  const progColor = distributed >= total ? '#22c55e' : distributed > 0 ? '#eab308' : '#cbd5e1';
+  const esc_center = escapeHtml(center);
+  const esc_type = escapeHtml(typeName);
+  const sid = sheet.sheetId;
 
-  return`<div class="h-sheet-card" style="background:#fff;border:2px solid #e2e8f0;border-radius:12px">
+  return `<div class="h-sheet-card" style="background:#fff;border:2px solid #e2e8f0;border-radius:12px">
     <div class="h-sheet-header" style="background:#f0f4ff;border-bottom:2px solid #cbd5e1;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
       <span style="font-weight:800;font-size:13px">${esc_type}</span>
       <span class="h-status ${sCls}">${sIcon} ${escapeHtml(status)}</span>
     </div>
     <div class="h-sheet-body" style="padding:12px">
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;color:#64748b">💰 المخصص</span><span style="font-weight:800;color:#1e40af;font-size:14px">${hFmtN(total)} ج.م</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;color:#64748b">📤 الموزع</span><span style="font-weight:700;color:${distributed>0?'#16a34a':'#94a3b8'}">${hFmtN(distributed)} ج.م</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;color:#64748b">📤 الموزع</span><span style="font-weight:700;color:${distributed > 0 ? '#16a34a' : '#94a3b8'}">${hFmtN(distributed)} ج.م</span></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0"><span style="font-size:12px;font-weight:800">⚡ المتبقي</span><span style="font-weight:900;font-size:15px;color:${remColor}">${remPfx}${hFmtN(remAbs)} ج.م</span></div>
       <div style="background:#e2e8f0;border-radius:10px;height:7px;margin:8px 0;overflow:hidden"><div style="width:${progressPercent}%;height:100%;background:${progColor};transition:width .3s"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:10px"><span>📊 ${Math.round(progressPercent)}%</span><span>👥 ${sheet.employeeCount||0} موظف</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:10px"><span>📊 ${Math.round(progressPercent)}%</span><span>👥 ${sheet.employeeCount || 0} موظف</span></div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="h-btn view" onclick="hViewSheet('${sid}','${esc_center}','${month}','${esc_type}')" style="font-size:10px;padding:4px 8px">👁️ عرض وتعديل</button>
-        ${canAppr?`<button class="h-btn approve" onclick="hQuickApprove('${sid}','${esc_center}','${month}')" style="font-size:10px;padding:4px 8px">✅ قبول</button>`:''}
+        ${canAppr ? `<button class="h-btn approve" onclick="hQuickApprove('${sid}','${esc_center}','${month}')" style="font-size:10px;padding:4px 8px">✅ قبول</button>` : ''}
         <button class="h-btn" style="background:#dc2626;color:white;font-size:10px;padding:4px 8px" onclick="hDeleteSheetData('${sid}','${esc_center}','${month}','${esc_type}')">🗑️ حذف بيانات</button>
         <button class="h-btn ret" onclick="hQuickReturn('${sid}','${esc_center}','${month}')" style="font-size:10px;padding:4px 8px">↩️ إرجاع</button>
         <button class="h-btn print" onclick="hPrintSheetFromAdmin('${sid}','${esc_center}','${month}','${esc_type}')" style="font-size:10px;padding:4px 8px">🖨️ طباعة</button>
-        <!-- زر المرفقات بلون متغير حسب وجود مرفقات -->
         <button class="h-btn" style="background:${attachBtnColor};color:white;font-size:10px;padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-weight:600" onclick="hOpenAttachments('${sid}','${esc_type}',false)">📎 المرفقات</button>
       </div>
     </div>
   </div>`;
 }
-
 // التعديل 1: طباعة من الإدارة
 async function hPrintSheetFromAdmin(sid,center,month,tN){
   hShowLoading();
@@ -3999,27 +4154,6 @@ function hCloseAttachments(){
   hAttCurSid = null;
 }
 
-async function hRefreshAttachList(){
-  const box = document.getElementById('hAttachList');
-  box.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px">⏳ جارٍ التحميل...</div>';
-  const r = await hApiCall('listAttachments',{sheetId:hAttCurSid});
-  if(!r.success){ box.innerHTML = '<div style="color:#dc2626;text-align:center">'+(r.message||'تعذر التحميل')+'</div>'; return; }
-  const list = r.attachments||[];
-  if(!list.length){ box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;border:1px dashed #e2e8f0;border-radius:10px">📭 لا توجد مرفقات حتى الآن</div>'; return; }
-  box.innerHTML = list.map(a=>{
-    const dt = a.date ? new Date(a.date).toLocaleString('ar-EG') : '';
-    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;background:#fff">
-      <div style="font-size:22px">📄</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:13px;color:#0f2b46;word-break:break-all">${escapeHtml(a.fileName||'ملف')}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">📅 ${escapeHtml(dt)}</div>
-      </div>
-      <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener" style="background:#16a085;color:#fff;padding:6px 10px;border-radius:8px;font-size:11px;text-decoration:none;font-weight:700">👁️ فتح</a>
-      <button onclick="hReplaceAttachment('${escapeHtml(a.fileId)}',${a.rowIndex})" style="background:#f39c12;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔄 استبدال</button>
-      <button onclick="hDeleteAttachment('${escapeHtml(a.fileId)}',${a.rowIndex},'${escapeHtml(a.fileName)}')" style="background:#e74c3c;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🗑️ حذف</button>
-    </div>`;
-  }).join('');
-}
 
 function _hFileToBase64(file){
   return new Promise((resolve,reject)=>{
@@ -4032,6 +4166,8 @@ function _hFileToBase64(file){
     r.onerror = ()=>reject(r.error);
     r.readAsDataURL(file);
   });
+} 
+
 async function hRefreshAttachList(){
   const box = document.getElementById('hAttachList');
   box.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px">⏳ جارٍ التحميل...</div>';
@@ -4069,7 +4205,6 @@ function hUpdateAttachButtonColor(sheetId, hasAttachments){
   btns.forEach(btn => {
     btn.style.background = hasAttachments ? '#22c55e' : '#94a3b8';
   });
-}
 }
 
 async function hHandleAttachFile(){
@@ -4123,5 +4258,18 @@ async function hReplaceAttachment(fileId, rowIndex){
     }catch(e){ hToast('خطأ: '+e.message,'error'); }
   };
   tmp.click();
+}
+function showWelcomeIfNeeded(){
+  try{
+    if(sessionStorage.getItem('seenWelcome')) return;
+    sessionStorage.setItem('seenWelcome','1');
+    const el=document.getElementById('welcomeModal');
+    if(!el) return;
+    const name=currentUser?.name||'المستخدم';
+    const greetings=['صباح الخير','صباح النور','مرحباً بيك','تشرفت'];
+    const greeting=greetings[Math.floor(Math.random()*greetings.length)];
+    document.getElementById('welcomeGreeting').textContent=`${greeting} ${name}! 👋`;
+    el.style.display='flex';
+  }catch(e){}
 }
 </script>
