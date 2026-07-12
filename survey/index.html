@@ -2711,7 +2711,6 @@ function hEnableAllocEditing(en){
 
 async function hLoadAdminData(force=false){
   if(!document.getElementById('hAllocBody')?.children.length) hBuildAllocMatrix(); // <-- السطر الجديد
-  if(!document.getElementById('hAdminMonthSel')?.options.length) hBuildMonthSelect('hAdminMonthSel', hCurMonthStr()); // <-- السطر الجديد
   const month=document.getElementById('hAdminMonthSel')?.value||hCurMonthStr();
   const title=document.getElementById('hAllocMonthTitle');if(title)title.textContent=hFmtMonth(month);
   hShowLoading();
@@ -4040,6 +4039,8 @@ function _hFileToBase64(file){
     r.onerror = ()=>reject(r.error);
     r.readAsDataURL(file);
   });
+}
+
 async function hRefreshAttachList(){
   const box = document.getElementById('hAttachList');
   box.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px">⏳ جارٍ التحميل...</div>';
@@ -4048,7 +4049,6 @@ async function hRefreshAttachList(){
   const list = r.attachments||[];
   if(!list.length){ 
     box.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px;border:1px dashed #e2e8f0;border-radius:10px">📭 لا توجد مرفقات حتى الآن</div>';
-    // تحديث لون الزر في البطاقة (أحمر)
     hUpdateAttachButtonColor(hAttCurSid, false);
     return; 
   }
@@ -4066,7 +4066,6 @@ async function hRefreshAttachList(){
     </div>`;
   }).join('');
   
-  // تحديث لون الزر في البطاقة (أخضر)
   hUpdateAttachButtonColor(hAttCurSid, true);
 }
 
