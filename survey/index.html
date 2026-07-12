@@ -1573,8 +1573,8 @@ function showPage(name, opts = {}) {
   if (typeof mobHighlightBtn === 'function') mobHighlightBtn(name);
   
   // تحميل البيانات (التحميل الخلفي مع استخدام الكاش إن وجد)
-  if (name === 'sessions') sessLoad();
-  if (name === 'hafez-admin') hLoadAdminData();
+if (name === 'sessions') sessLoad();
+  if (name === 'hafez-admin') { hBuildAllocMatrix(); hLoadAdminData(); }
   if (name === 'hafez-history') { 
     if (!hHistAllData || Object.keys(hHistAllData).length === 0) hBuildHistory(); else hRenderHistPivot(); 
   }
@@ -2704,10 +2704,11 @@ function hEnableAllocEditing(en){
 }
 
 async function hLoadAdminData(force=false){
+  if(!document.getElementById('hAllocBody')?.children.length) hBuildAllocMatrix(); // <-- السطر الجديد
   const month=document.getElementById('hAdminMonthSel')?.value||hCurMonthStr();
   const title=document.getElementById('hAllocMonthTitle');if(title)title.textContent=hFmtMonth(month);
   hShowLoading();
-  await hLoadAttCounts();  // <-- أضف هذا السطر
+  await hLoadAttCounts();
   const[allocArr,sheets]=await Promise.all([hGetAllocs(month,force),hGetSheets(month,force)]);
   let grandTot=0;
   H_CENTERS.forEach(c=>{
