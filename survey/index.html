@@ -942,7 +942,7 @@
           </div>
         </div>
         <div class="h-section-card" id="hInfraSectionCard">
-          <div class="h-section-head ih"><h3>بنية معلوماتية</h3><span id="hInfraBadge"><span class="h-badge h-badge-draft">مسودة</span></span></div>
+          <div class="h-section-head ih"><h3>الرفع المساحى</h3><span id="hInfraBadge"><span class="h-badge h-badge-draft">مسودة</span></span></div>
           <div class="h-section-body">
             <div id="hInfraLocked" class="h-locked-notice" style="display:none">🔒 الكشف مُقفل — تم الإرسال للإدارة</div>
             <div class="h-action-bar" id="hInfraActionBar">
@@ -956,7 +956,7 @@
             </div>
             <div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0"><table class="h-main-table"><thead><tr><th>#</th><th>الاسم</th><th>الرقم القومي</th><th>الوظيفة</th><th>المبلغ (ج.م)</th><th></th></tr></thead><tbody id="hInfraTbody"></tbody></table></div>
             <div class="h-sec-footer"><div style="font-size:12px"><span>الموزع: </span><strong id="hInfraDist" style="color:var(--primary)">0</strong> | <span>المتبقي: </span><strong id="hInfraRem" style="color:var(--green)">0</strong></div></div>
-<div class="h-approved-bar" id="hInfraApprBar"><span>✅ معتمد من الإدارة</span><button class="h-btn print" onclick="hPrintSheet('infra')">🖨️ طباعة</button><button class="h-btn" style="background:#8e44ad;color:#fff" onclick="hOpenAttachments(hInfraId,'بنية معلوماتية',true)">📎 المرفقات</button></div>
+<div class="h-approved-bar" id="hInfraApprBar"><span>✅ معتمد من الإدارة</span><button class="h-btn print" onclick="hPrintSheet('infra')">🖨️ طباعة</button><button class="h-btn" style="background:#8e44ad;color:#fff" onclick="hOpenAttachments(hInfraId,'الرفع المساحى',true)">📎 المرفقات</button></div>
             <div class="h-returned-bar" id="hInfraRetBar"><span>↩️ أُعيد للمراجعة: </span><span id="hInfraRetNotes" style="font-size:11px;color:#721c24"></span></div>
           </div>
         </div>
@@ -1050,7 +1050,7 @@
             <span style="background:#f0fdf4;padding:2px 8px;border-radius:10px;border:2px solid #22c55e;font-weight:600">🟢 الاثنان</span>
             <span style="background:#dcfce7;padding:2px 8px;border-radius:10px;border:2px solid #15803d;font-weight:600">✅ معتمدان</span>
           </div>
-          <div style="overflow-x:auto"><table class="h-centers-table" id="hCentersTable"><thead><tr><th style="text-align:right;min-width:140px">🏢 المركز</th><th style="min-width:340px">بنية معلوماتية</th><th style="min-width:340px">أجهزة معاونة</th></tr></thead><tbody id="hCentersTableBody"><tr><td colspan="3" style="text-align:center;padding:30px;color:#94a3b8"><div class="h-loading"><span class="h-dot"></span><span class="h-dot"></span><span class="h-dot"></span>جاري التحميل...</div></td></tr></tbody></table></div>
+          <div style="overflow-x:auto"><table class="h-centers-table" id="hCentersTable"><thead><tr><th style="text-align:right;min-width:140px">🏢 المركز</th><th style="min-width:340px">الرفع المساحى</th><th style="min-width:340px">أجهزة معاونة</th></tr></thead><tbody id="hCentersTableBody"><tr><td colspan="3" style="text-align:center;padding:30px;color:#94a3b8"><div class="h-loading"><span class="h-dot"></span><span class="h-dot"></span><span class="h-dot"></span>جاري التحميل...</div></td></tr></tbody></table></div>
         </div>
       </div>
 
@@ -1094,7 +1094,7 @@
           <div style="flex:2;min-width:200px"><input type="text" id="hEmpSearchInput" placeholder="🔍 اكتب الاسم أو الرقم القومي للبحث..." style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px" oninput="hLiveSearchEmployees()" onkeydown="if(event.key==='Enter')hRenderFilteredEmployees()"></div>
           <select id="hEmpFilterCenter" onchange="hRenderFilteredEmployees()" style="flex:1;min-width:140px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">كل المراكز</option></select>
           <select id="hEmpFilterStatus" onchange="hRenderFilteredEmployees()" style="flex:1;min-width:140px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">كل الحالات</option><option value="نشط">🟢 نشط</option><option value="غير نشط">🔴 غير نشط</option></select>
-          <select id="hEmpFilterType" onchange="hRenderFilteredEmployees()" style="flex:1;min-width:140px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">كل الأنواع</option><option value="بنية معلوماتية">بنية معلوماتية</option><option value="أجهزة معاونة">أجهزة معاونة</option><option value="قسم آخر">📁 قسم آخر</option></select>
+          <select id="hEmpFilterType" onchange="hRenderFilteredEmployees()" style="flex:1;min-width:140px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:10px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">كل الأنواع</option><option value="الرفع المساحى">الرفع المساحى</option><option value="أجهزة معاونة">أجهزة معاونة</option><option value="قسم آخر">📁 قسم آخر</option></select>
           <button onclick="hResetEmployeeFilters()" style="padding:8px 16px;background:#e2e8f0;color:#475569;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600">🗑️ مسح</button>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span id="hEmpResultsCount" style="font-size:12px;color:#64748b"></span></div>
@@ -2486,13 +2486,13 @@ async function hLoadCenterData(force=false){
   hShowLoading();
   try{
     const monthSheetsPromise=hGetSheets(month,force).then(sheets=>({
-      infra:{success:true,sheets:(sheets||[]).filter(s=>(s.center===center||normalizeCenter(s.center)===normalizeCenter(center))&&s.type==='بنية معلوماتية')},
+      infra:{success:true,sheets:(sheets||[]).filter(s=>(s.center===center||normalizeCenter(s.center)===normalizeCenter(center))&&s.type==='الرفع المساحى')},
       support:{success:true,sheets:(sheets||[]).filter(s=>(s.center===center||normalizeCenter(s.center)===normalizeCenter(center))&&s.type==='أجهزة معاونة')}
     }));
     const[monthSheets,aArr,iER,sER]=await Promise.all([
       monthSheetsPromise,
       hGetAllocs(month,force),
-      HC.emps?Promise.resolve({success:true,employees:(HC.byCenter[center]||[]).filter(e=>e.type==='بنية معلوماتية'&&e.status!=='inactive'&&e.type!=='قسم آخر')}):hApiCall('getEmployees',{center,type:'بنية معلوماتية'}),
+      HC.emps?Promise.resolve({success:true,employees:(HC.byCenter[center]||[]).filter(e=>e.type==='الرفع المساحى'&&e.status!=='inactive'&&e.type!=='قسم آخر')}):hApiCall('getEmployees',{center,type:'الرفع المساحى'}),
       HC.emps?Promise.resolve({success:true,employees:(HC.byCenter[center]||[]).filter(e=>e.type==='أجهزة معاونة'&&e.status!=='inactive'&&e.type!=='قسم آخر')}):hApiCall('getEmployees',{center,type:'أجهزة معاونة'})
     ]);
     const iSR=monthSheets.infra;
@@ -2618,7 +2618,7 @@ async function hSaveDraft(t){
   const month=document.getElementById('hCenterMonthSel')?.value||hCurMonthStr();
   if(t==='infra')hInfraRows=hDedupRows(hInfraRows);else hSuppRows=hDedupRows(hSuppRows);
   const rows=t==='infra'?hInfraRows:hSuppRows;
-  const tL=t==='infra'?'بنية معلوماتية':'أجهزة معاونة';
+  const tL=t==='infra'?'الرفع المساحى':'أجهزة معاونة';
   const sid=t==='infra'?hInfraId:hSuppId;
   if(!rows.length&&!sid){hToast('لا توجد بيانات للحفظ','warning');return;}
   hShowLoading();hShowBusy('💾 جاري حفظ الكشف...','يتم حفظ البيانات');
@@ -2634,7 +2634,7 @@ async function hSendSheet(t){
   const month=document.getElementById('hCenterMonthSel')?.value||hCurMonthStr();
   if(t==='infra')hInfraRows=hDedupRows(hInfraRows);else hSuppRows=hDedupRows(hSuppRows);
   const rows=t==='infra'?hInfraRows:hSuppRows;
-  const tL=t==='infra'?'بنية معلوماتية':'أجهزة معاونة';
+  const tL=t==='infra'?'الرفع المساحى':'أجهزة معاونة';
   const curSt=t==='infra'?hInfraSt:hSuppSt;
   if(hIsLocked(curSt)){hToast('الكشف مقفل أو تم إرساله مسبقاً','error');return;}
   if(!rows.length){hToast('لا توجد بيانات للإرسال','warning');return;}
@@ -2658,7 +2658,7 @@ async function hSendSheet(t){
 function hPrintSheet(t){
   const month=document.getElementById('hCenterMonthSel')?.value||hCurMonthStr();
   const rows=t==='infra'?hInfraRows:hSuppRows;
-  const tN=t==='infra'?'بنية معلوماتية':'أجهزة معاونة';
+  const tN=t==='infra'?'الرفع المساحى':'أجهزة معاونة';
   hPrintSheetData(currentUser.name,month,tN,rows);
 }
 
@@ -2973,12 +2973,12 @@ function hRenderCentersTable(sheets){
   const month=document.getElementById('hAdminMonthSel')?.value||hCurMonthStr();
   const sheetsMap={};for(const s of sheets){const key=`${s.center}_${s.type}`;sheetsMap[key]=s;}
   tbody.innerHTML=H_CENTERS.map(center=>{
-    const infSheet=sheetsMap[`${center}_بنية معلوماتية`];
+    const infSheet=sheetsMap[`${center}_الرفع المساحى`];
     const supSheet=sheetsMap[`${center}_أجهزة معاونة`];
     const alloc=hAllocData[center]||{inf:0,sup:0};
     return`<tr>
       <td style="font-weight:900;font-size:16px;color:#0d2137;border-right:4px solid #c8a84b;padding-right:14px">${escapeHtml(center)}</td>
-      <td>${hBuildSheetCard(infSheet,center,month,'inf','بنية معلوماتية',alloc.inf)}</td>
+      <td>${hBuildSheetCard(infSheet,center,month,'inf','الرفع المساحى',alloc.inf)}</td>
       <td>${hBuildSheetCard(supSheet,center,month,'sup','أجهزة معاونة',alloc.sup)}</td>
     </tr>`;
   }).join('');
@@ -3041,7 +3041,7 @@ async function hViewSheet(sid,center,month,tN){
   const isLocked=['معتمد','إرسال نهائي','مغلق'].includes(status);
   const canEdit=!isLocked;
   const alloc=(aArr||[]).find(a=>a.center===center||normalizeCenter(a.center)===normalizeCenter(center));
-  const allocForType=tN==='بنية معلوماتية'?(alloc?parseInt(alloc.infra)||0:0):(alloc?parseInt(alloc.support)||0:0);
+  const allocForType=tN==='الرفع المساحى'?(alloc?parseInt(alloc.infra)||0:0):(alloc?parseInt(alloc.support)||0:0);
   // استخدام window لتمرير المصفوفة بأمان
   window._hViewEmps=[...emps];
 
@@ -3296,7 +3296,7 @@ function getApprovedSheetsByYear(params) {
       
       // محاولة استخراج النوع
       if (sheetName.includes('بنية') || sheetName.includes('معلوماتية')) {
-        type = 'بنية معلوماتية';
+        type = 'الرفع المساحى';
       } else if (sheetName.includes('أجهزة') || sheetName.includes('معاونة')) {
         type = 'أجهزة معاونة';
       } else {
@@ -3522,7 +3522,7 @@ function hRenderFilteredEmployees(){
   tbody.innerHTML=filtered.map((e,i)=>{
     const isInactive=e.status==='غير نشط';
     const statusColor=isInactive?'var(--red)':'var(--green)';
-    const typeColor=e.type==='بنية معلوماتية'?'#dbeafe':e.type==='أجهزة معاونة'?'#fef3c7':'#f1f5f9';
+    const typeColor=e.type==='الرفع المساحى'?'#dbeafe':e.type==='أجهزة معاونة'?'#fef3c7':'#f1f5f9';
     const nid=e.nationalId;
     return`<tr style="${isInactive?'opacity:.55':''}">
       <td style="font-weight:700">${i+1}</td>
@@ -3551,7 +3551,7 @@ async function hEditEmp(nid){
   document.getElementById('hEmpNid').value=String(e.nationalId);
   document.getElementById('hEmpJob').value=e.job||'';
   document.getElementById('hEmpCenter').value=e.center||'';
-  document.getElementById('hEmpType').value=e.type||'بنية معلوماتية';
+  document.getElementById('hEmpType').value=e.type||'الرفع المساحى';
   document.getElementById('hEditEmpId').value=String(e.nationalId);
   const isInactive=e.status==='inactive'||e.status==='غير نشط';
   document.querySelectorAll('input[name="hEmpStatus"]').forEach(radio=>{radio.checked=(radio.value==='active'&&!isInactive)||(radio.value==='inactive'&&isInactive);});
@@ -3661,7 +3661,7 @@ function hOpenTransferModal(nationalId){
   const newCenterSelect=document.getElementById('hTransferNewCenter');
   if(newCenterSelect){newCenterSelect.innerHTML='<option value="">-- اختر المركز --</option>';H_CENTERS.forEach(center=>{const option=document.createElement('option');option.value=center;option.textContent=center+(center===emp.center?' 🏠 (الحالي)':'');newCenterSelect.appendChild(option);});}
   const newTypeSelect=document.getElementById('hTransferNewType');
-  if(newTypeSelect){newTypeSelect.innerHTML='';[{value:'بنية معلوماتية',label:'بنية معلوماتية'},{value:'أجهزة معاونة',label:'أجهزة معاونة'},{value:'قسم آخر',label:'📁 قسم آخر'}].forEach(t=>{const option=document.createElement('option');option.value=t.value;option.textContent=t.label;if(t.value===emp.type)option.selected=true;newTypeSelect.appendChild(option);});}
+  if(newTypeSelect){newTypeSelect.innerHTML='';[{value:'الرفع المساحى',label:'الرفع المساحى'},{value:'أجهزة معاونة',label:'أجهزة معاونة'},{value:'قسم آخر',label:'📁 قسم آخر'}].forEach(t=>{const option=document.createElement('option');option.value=t.value;option.textContent=t.label;if(t.value===emp.type)option.selected=true;newTypeSelect.appendChild(option);});}
   const newStatusSelect=document.getElementById('hTransferNewStatus');
   if(newStatusSelect){newStatusSelect.innerHTML='';[{value:'نشط',label:'🟢 نشط'},{value:'غير نشط',label:'🔴 غير نشط'}].forEach(s=>{const option=document.createElement('option');option.value=s.value;option.textContent=s.label;if(s.value===emp.status)option.selected=true;newStatusSelect.appendChild(option);});}
   hOpenModal('hTransferModal');
@@ -3909,7 +3909,7 @@ async function openPrintModal() {
               <input type="radio" name="pmType" value="both" checked> الاثنان
             </label>
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:7px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif">
-              <input type="radio" name="pmType" value="infra"> بنية معلوماتية
+              <input type="radio" name="pmType" value="infra"> الرفع المساحى
             </label>
             <label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:7px 14px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:'Cairo',sans-serif">
               <input type="radio" name="pmType" value="support"> أجهزة معاونة
@@ -4013,9 +4013,9 @@ async function pmExecutePrint() {
       for (let mo = 1; mo <= maxMo; mo++) months.push(`${year}-${String(mo).padStart(2, '0')}`);
     }
 
-    const typeFilter = typeVal === 'infra'   ? ['بنية معلوماتية']
+    const typeFilter = typeVal === 'infra'   ? ['الرفع المساحى']
                      : typeVal === 'support' ? ['أجهزة معاونة']
-                     : ['بنية معلوماتية', 'أجهزة معاونة'];
+                     : ['الرفع المساحى', 'أجهزة معاونة'];
 
     let sheetsDone = 0;
 
