@@ -706,7 +706,7 @@
         </div>
         <div class="filter-card">
           <div class="filter-row">
-            <div class="filter-group"><label>🏢 المركز</label><select id="srchCenter"><option value="">-- اختر المركز --</option><option>العدوة</option><option>مغاغة</option><option>بني مزار</option><option>مطاي</option><option>سمالوط</option><option>المنيا</option><option>أبو قرقاص</option><option>ملوي</option><option>ديرمواس</option></select></div>
+            <div class="filter-group"><label>🏢 المركز</label><select id="srchCenter"><option value="">-- اختر المركز --</option><option>العدوة</option><option>مغاغة</option><option>بني مزار</option><option>مطاي</option><option>سمالوط</option><option>المنيا</option><option>أبوقرقاص</option><option>ملوي</option><option>ديرمواس</option></select></div>
             <div class="filter-group"><label>📄 نوع الشهادة</label><select id="srchType"><option value="survey">🗺️ رفع مساحي</option><option value="leveling">📐 منسوب</option></select></div>
           </div>
           <div class="filter-row">
@@ -1276,7 +1276,7 @@ const SESSIONS_API = 'https://script.google.com/macros/s/AKfycbw11d7xiBS_xfu22yV
 
 //ثوابت وعوامل مشتركة للحافز//
 const H_API = 'https://script.google.com/macros/s/AKfycbw11d7xiBS_xfu22yVd17DcvqkU4_DmJyXblIPBsolCDMtIR65k6LwwanKo-rCWxAHp/exec';
-const H_CENTERS = ['العدوة','مغاغة','بني مزار','مطاي','سمالوط','المنيا','أبو قرقاص','ملوي','ديرمواس'];
+const H_CENTERS = ['العدوة','مغاغة','بني مزار','مطاي','سمالوط','المنيا','أبوقرقاص','ملوي','ديرمواس'];
 const H_LOCKED = ['مرسل للإدارة','قيد الفحص','معتمد','إرسال نهائي','مغلق'];
 let hInfraRows=[],hSuppRows=[],hCurAlloc={infra:0,support:0};
 let hInfraId=null,hSuppId=null,hInfraSt='مسودة',hSuppSt='مسودة';
@@ -1357,7 +1357,7 @@ function initLocalUsers() {
     'مطاي':        { pass:'ali123',   role:'center', name:'مطاي' },
     'سمالوط':      { pass:'bolas123', role:'center', name:'سمالوط' },
     'المنيا':      { pass:'abdo123',  role:'center', name:'المنيا' },
-    'أبو قرقاص':    { pass:'negm123',  role:'center', name:'أبو قرقاص' },
+    'أبوقرقاص':    { pass:'negm123',  role:'center', name:'أبوقرقاص' },
     'ملوي':        { pass:'ahmed123', role:'center', name:'ملوي' },
     'ديرمواس':     { pass:'amer123',  role:'center', name:'ديرمواس' }
   };
@@ -3286,7 +3286,7 @@ function getApprovedSheetsByYear(params) {
       }
       
       // محاولة استخراج المركز
-      const centersList = ['العدوة', 'مغاغة', 'بني مزار', 'مطاي', 'سمالوط', 'المنيا', 'ابوقرقاص', 'ملوي', 'ديرمواس', 'أبو قرقاص'];
+      const centersList = ['العدوة', 'مغاغة', 'بني مزار', 'مطاي', 'سمالوط', 'المنيا', 'ابوقرقاص', 'ملوي', 'ديرمواس', 'أبوقرقاص'];
       for (const c of centersList) {
         if (sheetName.includes(c)) {
           center = c;
