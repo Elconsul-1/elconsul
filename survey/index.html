@@ -1025,7 +1025,7 @@
             </div>
           </div>
           <div style="padding:14px;background:#fff">
-            <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#1e40af">💡 أدخل الإجمالي — يُقسَّم تلقائياً (٢/٣ بنية + ١/٣ أجهزة).</div>
+            <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#1e40af">💡 أدخل الإجمالي — يُقسَّم تلقائياً (٢/٣الرفع المساحى + ١/٣ أجهزة).</div>
             <!-- تعديل 4: wrapper للتمرير الأفقي على الموبايل -->
             <div class="h-alloc-matrix-wrapper">
               <table class="h-alloc-matrix"><thead id="hAllocHead"></thead><tbody id="hAllocBody"></tbody></table>
@@ -2758,7 +2758,7 @@ function hBuildAllocMatrix(){
   // بناء صفوف الجدول
   let bodyHtml = `
     <tr style="background:#eef4ff">
-      <td style="font-weight:700;font-size:11px;padding:6px;">🏗️ بنية</td>
+      <td style="font-weight:700;font-size:11px;padding:6px;">🏗️ الرفع المساحى</td>
       ${H_CENTERS.map(c => `<td><input type="number" class="h-alloc-input" id="hInf_${c}" value="0" min="0" disabled onchange="hCalcCenter('${c}')" oninput="hCalcCenter('${c}')"></td>`).join('')}
     </tr>
     <tr style="background:#fff8ee">
